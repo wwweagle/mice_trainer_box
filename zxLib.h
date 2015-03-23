@@ -18,9 +18,6 @@ extern "C" {
 
 //#define zxLibVer "z611"
 
-#define lowThres 75
-#define HighThres 80
-
 #define laserDuring3Baseline 3
 #define laserDuring4Baseline 4
 #define laserDuringBaseline 5
@@ -119,10 +116,32 @@ extern "C" {
 #define _EEP_FREQ_LOW_OFFSET 0
 #define _EEP_FREQ_HIGH_OFFSET 2
 
-extern float odorLength;
+//extern float odorLength;
 extern char* zxVer;
-extern unsigned int licking, lickFlag;
+//extern unsigned int licking, lickFlag;
+//extern unsigned int ramp, ramping,laserTimerOn,pwmDutyCycleHi,pwmDutyCycleLo;
+
+extern unsigned int ramp;
+extern unsigned int ramping;
+extern unsigned int pwmDutyCycleHi;
+extern unsigned int pwmDutyCycleLo;
+extern unsigned int laserTimerOn;
+extern unsigned int licking;
+extern const char odorTypes[];
+extern unsigned int timeFilter;
+extern unsigned int laserTrialType;
+extern unsigned int taskType;
+extern unsigned int lickFlag;
+extern unsigned int fullduty;
+extern unsigned int lickLCount;
+extern unsigned int lickRCount;
+
+
+
 void setOdorLength(float in);
+
+
+
 
 void shuffleArray(unsigned int orgArray[], unsigned int arraySize);
 void lcdWriteNumber(int n, int digits, int x, int y);
@@ -135,9 +154,7 @@ void odorDepeltion(int totalTrial);
 void zxLaserTrial(int type, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
 void callFunction(int n);
 
-//
-//void zxGoNogoTrial(int go_odor, int isGo, int laserOn, float odorlen, int delay, float waterlen,
-//        int ITI);
+
 void wait_ms(int time);
 //void setLaser(void);
 
