@@ -3,12 +3,12 @@
 #include "zxLib.h"
 #include <libpic30.h>
 
-char* zxVer = "z5320";
+char* zxVer = "z5323";
 float odorLength = 1.0;
 
-//unsigned int laserTimer = 0;
-//unsigned int laserOnTime = 65535;
-//unsigned int laserOffTime = 0;
+unsigned int laserTimer = 0;
+unsigned int laserOnTime = 65535;
+unsigned int laserOffTime = 0;
 unsigned int ramp = 0;
 unsigned int ramping = 0;
 unsigned int pwmDutyCycleHi = 0xfe;
@@ -54,13 +54,13 @@ int filtered(void) {
 
 void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
     IFS0bits.T1IF = 0;
-    //    laserTimer += 5;
+    laserTimer += 5;
     timerCounterI += 5;
     timerCounterJ += 5;
 
 
-    //    if (laserTimerOn && (laserTimer % (laserOnTime + laserOffTime) < laserOnTime)) {
-    if (laserTimerOn) {
+    if (laserTimerOn && (laserTimer % (laserOnTime + laserOffTime) < laserOnTime)) {
+        //    if (laserTimerOn) {
         Out4 = 1;
         __builtin_nop();
         __builtin_nop();
@@ -162,7 +162,7 @@ void protectedSerialSend(int type, int value) {
 }
 
 void turnOnLaser() {
-
+    laserTimer = 0;
     lcdWriteChar('L', 4, 1);
     protectedSerialSend(SpLaserSwitch, 1);
     laserTimerOn = 1;
@@ -170,9 +170,9 @@ void turnOnLaser() {
 
 void turnOffLaser() {
 
+    laserTimerOn = 0;
     lcdWriteChar('.', 4, 1);
     protectedSerialSend(SpLaserSwitch, 0);
-    laserTimerOn = 0;
 }
 
 void assertLaser(int type, int step, int currentTrial) {
@@ -1138,6 +1138,21 @@ void testPort(void) {
     }
 }
 
+void laserTrain() {
+    unsigned int freqs[] = {1, 5, 10, 20, 50, 100};
+    laserOnTime = 5;
+    unsigned int idx = 0;
+    for (idx = 0; idx < 6; idx++) {
+        unsigned int duration = 1000 / freqs[idx];
+        laserOffTime = duration - laserOnTime;
+        turnOnLaser();
+        wait_ms(duration * 10 - 1);
+        laserTimerOn=0;
+        turnOffLaser();
+        wait_ms(2000);
+    }
+}
+
 void shiftingLaser(void) {
     while (1) {
 
@@ -1501,13 +1516,10 @@ void callFunction(int n) {
             break;
         }
 
-            //        case 4434:
-            //        {
-            //            splash("DNMS LR", "Laser EveryTrial");
-            //            taskType = _DNMS_LR_TASK;
-            //            zxLaserSessions(setType(), laserDuringDelay, 5, 10, 20, 0.05, 200, 20, 1.0);
-            //            break;
-            //        }
+        case 4434:
+            laserTrain();
+            break;
+
         case 4435:
         {
             splash("Baseline LR", "Laser EveryTrial");

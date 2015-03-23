@@ -121,6 +121,10 @@ extern char* zxVer;
 //extern unsigned int licking, lickFlag;
 //extern unsigned int ramp, ramping,laserTimerOn,pwmDutyCycleHi,pwmDutyCycleLo;
 
+extern unsigned int laserTimer;
+extern unsigned int laserOnTime ;
+extern unsigned int laserOffTime ;
+
 extern unsigned int ramp;
 extern unsigned int ramping;
 extern unsigned int pwmDutyCycleHi;
@@ -135,12 +139,6 @@ extern unsigned int lickFlag;
 extern unsigned int fullduty;
 extern unsigned int lickLCount;
 extern unsigned int lickRCount;
-
-
-
-void setOdorLength(float in);
-
-
 
 
 void shuffleArray(unsigned int orgArray[], unsigned int arraySize);
