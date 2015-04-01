@@ -25,6 +25,7 @@ extern "C" {
 #define laserDuringBaselineNDelay 9
 #define laserDuringDelay 10
 #define laserDuringDelayChR2 11
+#define laserDelayDistractor 12
 #define laserDuringOdor 20
 #define laserDuring1stOdor 21
 #define laserDuring2ndOdor 22
@@ -139,6 +140,8 @@ extern unsigned int lickFlag;
 extern unsigned int fullduty;
 extern unsigned int lickLCount;
 extern unsigned int lickRCount;
+
+extern int _DEBUGGING;
 
 
 void shuffleArray(unsigned int orgArray[], unsigned int arraySize);

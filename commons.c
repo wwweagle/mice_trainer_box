@@ -404,15 +404,19 @@ void Valve_OFF(unsigned int N) {
 //}
 
 void DelayNuSec(unsigned int N) {
-    unsigned int j;
-    while (N--)
-        for (j = 0; j < uSEC; j++);
+    if(_DEBUGGING) return;
+    int i=0;
+    for (; i < N * 1.6f; i++);
+    //    unsigned int j;
+    //    while (N--)
+    //        for (j = 0; j < uSEC; j++);
 }
 
 void DelayNmSecNew(unsigned int N) {
+    if (_DEBUGGING) return; //DEBUG
     timerCounterJ = 0;
     while (timerCounterJ < N) {
-        Nop();
+//        Nop();
     }
 }
 
@@ -463,6 +467,11 @@ void counts_dispose(unsigned int counter) {
 }
 
 unsigned int getFuncNumber(int targetDigits, char* input) {
+    if (_DEBUGGING) {
+        int n = 0;
+        return n;
+    }
+
     int bitSet[targetDigits];
     int bitValue[targetDigits];
     unsigned int n;

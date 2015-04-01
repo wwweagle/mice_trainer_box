@@ -3,6 +3,10 @@
 #include "zxLib.h"
 #include <libpic30.h>
 
+//DEBUG
+
+int _DEBUGGING = 0;
+
 char* zxVer = "z5323";
 float odorLength = 1.0;
 
@@ -148,6 +152,7 @@ int setDelay(int type) {
 //}
 
 void protectedSerialSend(int type, int value) {
+    if (_DEBUGGING) return; //DEBUG
     IEC0bits.T1IE = 0;
     IEC0bits.T3IE = 0;
     unsigned int i;
@@ -442,6 +447,16 @@ int read_eeprom(int offset) {
     return temp;
 }
 
+
+void processHit(float waterPeroid, int valve, int id) {
+    Valve_ON(valve, fullduty);
+    wait_ms(waterPeroid * 1000);
+    Valve_OFF(valve);
+    currentMiss = 0;
+    protectedSerialSend(SpHit, id);
+    lcdWriteNumber(++hit, 3, 6, 1);
+}
+
 void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
     lickFlag = 0;
     switch (taskType) {
@@ -478,12 +493,13 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                 protectedSerialSend(SpFalseAlarm, 1);
                 lcdWriteNumber(++falseAlarm, 3, 6, 2);
             } else {
-                Valve_ON(water_sweet, fullduty);
-                wait_ms(waterPeroid * 1000);
-                Valve_OFF(water_sweet);
-                currentMiss = 0;
-                protectedSerialSend(SpHit, 1);
-                lcdWriteNumber(++hit, 3, 6, 1);
+//                Valve_ON(water_sweet, fullduty);
+//                wait_ms(waterPeroid * 1000);
+//                Valve_OFF(water_sweet);
+//                currentMiss = 0;
+//                protectedSerialSend(SpHit, 1);
+//                lcdWriteNumber(++hit, 3, 6, 1);
+                processHit(water_sweet,1,1);
             }
             break;
 
@@ -503,12 +519,13 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                 protectedSerialSend(SpMiss, (firstOdor != secondOdor) ? 2 : 3);
                 lcdWriteNumber(++miss, 3, 10, 1);
             } else if (!(lickFlag & 1) != !(firstOdor^secondOdor)) {
-                Valve_ON(lickFlag & 1 ? 4 : 1, fullduty);
-                wait_ms(waterPeroid * 1000);
-                Valve_OFF(lickFlag & 1 ? 4 : 1);
-                currentMiss = 0;
-                protectedSerialSend(SpHit, lickFlag);
-                lcdWriteNumber(++hit, 3, 6, 1);
+//                Valve_ON(lickFlag & 1 ? 4 : 1, fullduty);
+//                wait_ms(waterPeroid * 1000);
+//                Valve_OFF(lickFlag & 1 ? 4 : 1);
+//                currentMiss = 0;
+//                protectedSerialSend(SpHit, lickFlag);
+//                lcdWriteNumber(++hit, 3, 6, 1);
+                processHit(waterPeroid,lickFlag & 1 ? 4 : 1,lickFlag);
             } else {
                 currentMiss = 0;
                 protectedSerialSend(SpFalseAlarm, lickFlag == _LICKING_LEFT ? 2 : 3);
@@ -525,19 +542,21 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
 
             /////Reward
             if (lickFlag == _LICKING_LEFT && (firstOdor == 2 || firstOdor == 5 || firstOdor == 7)) {
-                Valve_ON(1, 0xfe);
-                wait_ms(waterPeroid * 1000);
-                Valve_OFF(1);
-                currentMiss = 0;
-                protectedSerialSend(SpHit, 2);
-                lcdWriteNumber(++hit, 3, 6, 1);
+//                Valve_ON(1, 0xfe);
+//                wait_ms(waterPeroid * 1000);
+//                Valve_OFF(1);
+//                currentMiss = 0;
+//                protectedSerialSend(SpHit, 2);
+//                lcdWriteNumber(++hit, 3, 6, 1);
+                processHit(waterPeroid,1,2);
             } else if (lickFlag == _LICKING_RIGHT && (firstOdor == 3 || firstOdor == 6 || firstOdor == 8)) {
-                Valve_ON(4, 0xfe);
-                wait_ms(waterPeroid * 1000);
-                Valve_OFF(4);
-                currentMiss = 0;
-                protectedSerialSend(SpHit, 3);
-                lcdWriteNumber(++hit, 3, 6, 1);
+//                Valve_ON(4, 0xfe);
+//                wait_ms(waterPeroid * 1000);
+//                Valve_OFF(4);
+//                currentMiss = 0;
+//                protectedSerialSend(SpHit, 3);
+//                lcdWriteNumber(++hit, 3, 6, 1);
+                processHit(waterPeroid,4,3);
             } else if (lickFlag) {
                 currentMiss = 0;
                 protectedSerialSend(SpFalseAlarm, lickFlag == _LICKING_LEFT ? 2 : 3);
@@ -570,16 +589,21 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                 protectedSerialSend(SpFalseAlarm, 1);
                 lcdWriteNumber(++falseAlarm, 3, 6, 2);
             } else {
-
-                Valve_ON(water_sweet, fullduty);
-                wait_ms(waterPeroid * 1000);
-                Valve_OFF(water_sweet);
-                currentMiss = 0;
-                protectedSerialSend(SpHit, 1);
-                lcdWriteNumber(++hit, 3, 6, 1);
+                processHit(waterPeroid, 1, 1);
             }
             break;
     }
+}
+
+
+
+void distractor(int distractOdor) {
+    Valve_ON(distractOdor, fullduty);
+    protectedSerialSend(SpOdor_C, distractOdor);
+    lcdWriteChar('d', 4, 1);
+    wait_ms(odorLength * 1000 - 10);
+    Valve_OFF(distractOdor);
+    lcdWriteChar('D', 4, 1);
 }
 
 void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int trialsPerSession, float WaterLen, int missLimit, int totalSession, float delay_before_reward) {
@@ -772,9 +796,14 @@ void zxLaserTrial(int type, int firstOdor, float odorLength, float interOdorDela
         if (interOdorDelay < 4) {
             wait_ms(interOdorDelay * 1000 - 2000);
         } else {
-            wait_ms(500);
-            assertLaser(type, atDelay1_5SecIn, laserOnTrial);
-            wait_ms(500);
+            //TODO INSERT DISTRACTOR HERE
+            if (type == laserDelayDistractor) {
+                distractor(2);
+            } else {
+                wait_ms(500);
+                assertLaser(type, atDelay1_5SecIn, laserOnTrial);
+                wait_ms(500);
+            }
             assertLaser(type, atDelay2SecIn, laserOnTrial);
             wait_ms(interOdorDelay * 500 - 2500);
             assertLaser(type, atDelay_5ToMiddle, laserOnTrial);
@@ -816,16 +845,14 @@ void zxLaserTrial(int type, int firstOdor, float odorLength, float interOdorDela
         }
         protectedSerialSend(secondSend, secondOdor);
         lcdWriteChar('2', 4, 1);
-        wait_ms(odorLength * 1000);
+        wait_ms(odorLength * 1000 - 10);
         Valve_OFF(secondOdor);
         lcdWriteChar('D', 4, 1);
         assertLaser(type, atSecondOdorEnd, laserOnTrial);
         Out2 = 0;
         Nop();
         Nop();
-        Nop();
         Out3 = 0;
-        Nop();
         Nop();
         Nop();
         protectedSerialSend(secondSend, 0);
@@ -1082,6 +1109,7 @@ void splash(char * s1, char * s2) {
 }
 
 void wait_ms(int time) {
+    if (_DEBUGGING) return; //DEBUG
     timerCounterI = 0;
     while (time > 0 && timerCounterI < time) {
     }
@@ -1147,51 +1175,51 @@ void laserTrain() {
         laserOffTime = duration - laserOnTime;
         turnOnLaser();
         wait_ms(duration * 10 - 1);
-        laserTimerOn=0;
+        laserTimerOn = 0;
         turnOffLaser();
         wait_ms(2000);
     }
 }
 
-void shiftingLaser(void) {
-    while (1) {
-
-        Out1 = 1;
-        Nop();
-        Nop();
-        Out2 = 1;
-        Nop();
-        Nop();
-        Out3 = 1;
-        Nop();
-        Nop();
-        Out4 = 1;
-        Nop();
-        Nop();
-        Out5 = 1;
-        Nop();
-        Nop();
-        Out6 = 1;
-        wait_ms(3000);
-        Out1 = 0;
-        Nop();
-        Nop();
-        Out2 = 0;
-        Nop();
-        Nop();
-        Out3 = 0;
-        Nop();
-        Nop();
-        Out4 = 0;
-        Nop();
-        Nop();
-        Out5 = 0;
-        Nop();
-        Nop();
-        Out6 = 0;
-        wait_ms(20000);
-    }
-}
+//void shiftingLaser(void) {
+//    while (1) {
+//
+//        Out1 = 1;
+//        Nop();
+//        Nop();
+//        Out2 = 1;
+//        Nop();
+//        Nop();
+//        Out3 = 1;
+//        Nop();
+//        Nop();
+//        Out4 = 1;
+//        Nop();
+//        Nop();
+//        Out5 = 1;
+//        Nop();
+//        Nop();
+//        Out6 = 1;
+//        wait_ms(3000);
+//        Out1 = 0;
+//        Nop();
+//        Nop();
+//        Out2 = 0;
+//        Nop();
+//        Nop();
+//        Out3 = 0;
+//        Nop();
+//        Nop();
+//        Out4 = 0;
+//        Nop();
+//        Nop();
+//        Out5 = 0;
+//        Nop();
+//        Nop();
+//        Out6 = 0;
+//        wait_ms(20000);
+//    }
+//}
 
 void testValve(void) {
     int v = getFuncNumber(1, "Valve No?");
@@ -1425,6 +1453,16 @@ void callFunction(int n) {
             zxLaserSessions(setType(), laserDuringDelay, delay, delay * 2, 20, 0.05, 50, 40, 1.0);
             break;
         }
+
+
+        case 4413:
+        {
+            splash("DNMS LR Distra.", "Laser EveryTrial");
+            taskType = _DNMS_LR_TASK;
+            laserTrialType = _LASER_EVERY_TRIAL;
+            zxLaserSessions(3, laserDelayDistractor, 5, 10, 20, 0.05, 200, 10, 1.0);
+            break;
+        }
         case 4414:
         {
             splash("Varying Delay", "DC laser,");
@@ -1472,9 +1510,9 @@ void callFunction(int n) {
             zxLaserSessions(setType(), laserDuringDelay, 4, 8, 20, 0.05, 60, setSessionNum(), 1.0);
             break;
 
-        case 4426:
-            shiftingLaser();
-            break;
+            //        case 4426:
+            //            shiftingLaser();
+            //            break;
 
         case 4431:
         {

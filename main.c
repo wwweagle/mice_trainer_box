@@ -1,4 +1,3 @@
-#define versionInfo "zxx 20131106 v37"
 
 #include "commons.h"
 #include "tasks.h"
@@ -7,7 +6,6 @@
 #include "cq.h"
 //#include "ShallWay.h"
 //#include "gcf.h"
-//201
 
 void FuncID(int n);
 _FOSC(CSW_FSCM_OFF & XT_PLL4);
