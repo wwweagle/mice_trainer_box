@@ -5,9 +5,9 @@
 
 //DEBUG
 
-int _DEBUGGING = 0;
+const char _DEBUGGING = 0;
 
-char* zxVer = "z5323";
+char* zxVer = "z5420";
 float odorLength = 1.0;
 
 unsigned int laserTimer = 0;
@@ -27,6 +27,7 @@ unsigned int lickFlag = 0;
 unsigned int fullduty = 0xFE;
 unsigned int lickLCount = 0;
 unsigned int lickRCount = 0;
+unsigned int wait_Trial = 1;
 
 int highLevelShuffleLength = 12;
 
@@ -56,11 +57,24 @@ int filtered(void) {
     return (timerCounterJ < timeFilter || timerCounterJ > timeFilter + 50);
 }
 
+void tick(int i) {
+    laserTimer += i;
+    timerCounterI += i;
+    if (timerCounterJ == 65535) {
+        timerCounterJ = 0;
+    } else {
+        timerCounterJ += i;
+    }
+}
+
+void resetTimerCounterJ() {
+    timerCounterJ = 65535;
+    while (timerCounterJ > 1);
+}
+
 void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
     IFS0bits.T1IF = 0;
-    laserTimer += 5;
-    timerCounterI += 5;
-    timerCounterJ += 5;
+    tick(5);
 
 
     if (laserTimerOn && (laserTimer % (laserOnTime + laserOffTime) < laserOnTime)) {
@@ -86,14 +100,19 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         }
 
     }
-
-    if (_LICK_LEFT && !licking && filtered()) {
+    if (_LICK_LEFT && _LICK_RIGHT) {
+        Out1 = 1;
+        Nop();
+        Nop();
+        Out6 = 1;
+    } else if (_LICK_LEFT && !licking && filtered()) {
         timeFilter = timerCounterJ;
         licking = _LICKING_LEFT;
         Out1 = 1;
         lickLCount++;
         Nop();
         localSendOnce(SpLick, taskType < 35 ? 1 : 2);
+        //        tick(3);
     } else if (_LICK_RIGHT && !licking && filtered()) {
         timeFilter = timerCounterJ;
         licking = _LICKING_RIGHT;
@@ -101,6 +120,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         lickRCount++;
         Nop();
         localSendOnce(SpLick, 3);
+        //        tick(3);
     } else if (licking && !_LICK_ANY) {
 
         licking = 0;
@@ -158,10 +178,8 @@ void protectedSerialSend(int type, int value) {
     unsigned int i;
     for (i = 0; i < 6400; i++); //1600 per ms
     localSendOnce(type, value);
-
     for (i = 0; i < 4800; i++); //1600 per ms
-    timerCounterI += 10;
-    timerCounterJ += 10;
+    tick(10);
     IEC0bits.T1IE = 1;
     IEC0bits.T3IE = 1;
 }
@@ -374,6 +392,13 @@ void assertLaser(int type, int step, int currentTrial) {
                     turnOffLaser();
                 }
                 break;
+            case laserDelayDistractor:
+                if (step == atDelay1SecIn) {
+                    turnOnLaser();
+                } else if (step == atDelay2SecIn) {
+                    turnOffLaser();
+                }
+                break;
         }
     }
 }
@@ -447,7 +472,6 @@ int read_eeprom(int offset) {
     return temp;
 }
 
-
 void processHit(float waterPeroid, int valve, int id) {
     Valve_ON(valve, fullduty);
     wait_ms(waterPeroid * 1000);
@@ -455,6 +479,28 @@ void processHit(float waterPeroid, int valve, int id) {
     currentMiss = 0;
     protectedSerialSend(SpHit, id);
     lcdWriteNumber(++hit, 3, 6, 1);
+}
+
+void processFalse(int id) {
+    currentMiss = 0;
+    protectedSerialSend(SpFalseAlarm, id);
+    lcdWriteNumber(++falseAlarm, 3, 6, 2);
+}
+
+void processMiss(int id) {
+    currentMiss++;
+    protectedSerialSend(SpMiss, id);
+    lcdWriteNumber(++miss, 3, 10, 1);
+}
+
+void processLRTeaching(float waterPeroid, int LR) {
+    if ((rand() % 3) == 0) {
+        Valve_ON(LR == 2 ? 1 : 4, fullduty);
+        wait_ms(waterPeroid * 1000);
+        Valve_OFF(LR == 2 ? 1 : 4);
+        //        currentMiss = 0;
+        protectedSerialSend(SpWater_sweet, LR);
+    }
 }
 
 void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
@@ -469,8 +515,7 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
         case _ASSOCIATE_SHAPPING_TASK:
 
             ///////////Detect/////////////////
-            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag; lickFlag = licking) {
-            }
+            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag; lickFlag = licking);
 
             /////Reward
             if (!lickFlag) {
@@ -478,9 +523,7 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                     protectedSerialSend(SpCorrectRejection, 1);
                     lcdWriteNumber(++correctRejection, 3, 10, 2);
                 } else {
-                    currentMiss++;
-                    protectedSerialSend(SpMiss, 1);
-                    lcdWriteNumber(++miss, 3, 10, 1);
+                    processMiss(1);
                     if ((taskType == _SHAPPING_TASK || taskType == _ASSOCIATE_SHAPPING_TASK) && ((rand() % 3) == 0)) {
                         Valve_ON(water_sweet, fullduty);
                         protectedSerialSend(SpMiss3, 1);
@@ -489,20 +532,11 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                     }
                 }
             } else if (firstOdor == secondOdor || firstOdor == secondOdor + 3) {
-                currentMiss = 0;
-                protectedSerialSend(SpFalseAlarm, 1);
-                lcdWriteNumber(++falseAlarm, 3, 6, 2);
+                processFalse(1);
             } else {
-//                Valve_ON(water_sweet, fullduty);
-//                wait_ms(waterPeroid * 1000);
-//                Valve_OFF(water_sweet);
-//                currentMiss = 0;
-//                protectedSerialSend(SpHit, 1);
-//                lcdWriteNumber(++hit, 3, 6, 1);
-                processHit(water_sweet,1,1);
+                processHit(waterPeroid, 1, 1);
             }
             break;
-
 
             /*
              *DNMS-LR
@@ -510,69 +544,54 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
         case _DNMS_LR_TASK:
             //
             ///////////Detect/////////////////
-            for (timerCounterI = 0; timerCounterI < 1000 && !lickFlag; lickFlag = licking) {
-            }
-
+            for (timerCounterI = 0; timerCounterI < 1000 && !lickFlag; lickFlag = licking);
             /////Reward
             if (!lickFlag) {
-                currentMiss++;
-                protectedSerialSend(SpMiss, (firstOdor != secondOdor) ? 2 : 3);
-                lcdWriteNumber(++miss, 3, 10, 1);
+                processMiss((firstOdor != secondOdor) ? 2 : 3);
             } else if (!(lickFlag & 1) != !(firstOdor^secondOdor)) {
-//                Valve_ON(lickFlag & 1 ? 4 : 1, fullduty);
-//                wait_ms(waterPeroid * 1000);
-//                Valve_OFF(lickFlag & 1 ? 4 : 1);
-//                currentMiss = 0;
-//                protectedSerialSend(SpHit, lickFlag);
-//                lcdWriteNumber(++hit, 3, 6, 1);
-                processHit(waterPeroid,lickFlag & 1 ? 4 : 1,lickFlag);
+                processHit(waterPeroid, lickFlag & 1 ? 4 : 1, lickFlag);
             } else {
-                currentMiss = 0;
-                protectedSerialSend(SpFalseAlarm, lickFlag == _LICKING_LEFT ? 2 : 3);
-                lcdWriteNumber(++falseAlarm, 3, 6, 2);
+                processFalse(lickFlag == _LICKING_LEFT ? 2 : 3);
+            }
+            break;
+
+        case _DNMS_LR_TEACH:
+            //
+            ///////////Detect/////////////////
+            for (timerCounterI = 0; timerCounterI < 1000 && !lickFlag; lickFlag = licking);
+            /////Reward
+            if (!lickFlag) {
+                processMiss((firstOdor != secondOdor) ? 2 : 3);
+                processLRTeaching(waterPeroid, (firstOdor != secondOdor) ? 2 : 3);
+            } else if (!(lickFlag & 1) != !(firstOdor^secondOdor)) {
+                processHit(waterPeroid, lickFlag & 1 ? 4 : 1, lickFlag);
+            } else {
+                processFalse(lickFlag == _LICKING_LEFT ? 2 : 3);
+                processLRTeaching(waterPeroid, (firstOdor != secondOdor) ? 2 : 3);
             }
             break;
 
         case _GONOGO_LR_TASK:
-        case _GONOGO_LR_TRAIN:
+        case _GONOGO_LR_TEACH:
             //
             ///////////Detect/////////////////
-            for (timerCounterI = 0; timerCounterI < 1000 && !lickFlag; lickFlag = licking) {
-            }
+            for (timerCounterI = 0; timerCounterI < 1000 && !lickFlag; lickFlag = licking);
 
             /////Reward
             if (lickFlag == _LICKING_LEFT && (firstOdor == 2 || firstOdor == 5 || firstOdor == 7)) {
-//                Valve_ON(1, 0xfe);
-//                wait_ms(waterPeroid * 1000);
-//                Valve_OFF(1);
-//                currentMiss = 0;
-//                protectedSerialSend(SpHit, 2);
-//                lcdWriteNumber(++hit, 3, 6, 1);
-                processHit(waterPeroid,1,2);
+                processHit(waterPeroid, 1, 2);
             } else if (lickFlag == _LICKING_RIGHT && (firstOdor == 3 || firstOdor == 6 || firstOdor == 8)) {
-//                Valve_ON(4, 0xfe);
-//                wait_ms(waterPeroid * 1000);
-//                Valve_OFF(4);
-//                currentMiss = 0;
-//                protectedSerialSend(SpHit, 3);
-//                lcdWriteNumber(++hit, 3, 6, 1);
-                processHit(waterPeroid,4,3);
+                processHit(waterPeroid, 4, 3);
             } else if (lickFlag) {
-                currentMiss = 0;
-                protectedSerialSend(SpFalseAlarm, lickFlag == _LICKING_LEFT ? 2 : 3);
-                lcdWriteNumber(++falseAlarm, 3, 6, 2);
+                processFalse(lickFlag == _LICKING_LEFT ? 2 : 3);
             } else {
-                currentMiss++;
-                protectedSerialSend(SpMiss, (firstOdor == 2 || firstOdor == 5 || firstOdor == 7) ? 2 : 3);
-                lcdWriteNumber(++miss, 3, 10, 1);
+                processMiss((firstOdor == 2 || firstOdor == 5 || firstOdor == 7) ? 2 : 3);
             }
             break;
 
         case _GONOGO_TASK:
 
-            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag;) {
-                lickFlag = licking;
-            }
+            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag; lickFlag = licking);
 
             /////Reward
             if (!lickFlag) {
@@ -580,22 +599,16 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                     protectedSerialSend(SpCorrectRejection, 1);
                     lcdWriteNumber(++correctRejection, 3, 10, 2);
                 } else {
-                    currentMiss++;
-                    protectedSerialSend(SpMiss, 1);
-                    lcdWriteNumber(++miss, 3, 10, 1);
+                    processMiss(1);
                 }
             } else if (firstOdor == 3 || firstOdor == 6 || firstOdor == 8) {
-                currentMiss = 0;
-                protectedSerialSend(SpFalseAlarm, 1);
-                lcdWriteNumber(++falseAlarm, 3, 6, 2);
+                processFalse(1);
             } else {
                 processHit(waterPeroid, 1, 1);
             }
             break;
     }
 }
-
-
 
 void distractor(int distractOdor) {
     Valve_ON(distractOdor, fullduty);
@@ -604,6 +617,16 @@ void distractor(int distractOdor) {
     wait_ms(odorLength * 1000 - 10);
     Valve_OFF(distractOdor);
     lcdWriteChar('D', 4, 1);
+}
+
+void waitTrial() {
+    if (!wait_Trial) {
+        return;
+    }
+    while (u2Received != 0x31) {
+        protectedSerialSend(20, 1);
+    }
+    u2Received = -1;
 }
 
 void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int trialsPerSession, float WaterLen, int missLimit, int totalSession, float delay_before_reward) {
@@ -627,7 +650,8 @@ void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int tria
         unsigned int shuffledDelays[highLevelShuffleLength];
         shuffleArray(shuffledDelays, highLevelShuffleLength);
         int firstOdor, secondOdor;
-        int lastOdor;
+        int lastOdor1;
+        int lastOdor2;
         for (currentTrial = 0; currentTrial < trialsPerSession && currentMiss < missLimit;) {
             shuffleArray(shuffledList, 4);
             int iter;
@@ -650,18 +674,32 @@ void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int tria
                         firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
                         secondOdor = -odorType;
                         break;
-                    case _GONOGO_LR_TRAIN:
+                    case _DNMS_LR_TEACH:
                         if (hit > lastHit || currentTrial == 0) {
                             firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
-                            lastOdor = firstOdor;
+                            secondOdor = (index == 1 || index == 2) ? odor_A : odor_B;
+                            lastOdor1 = firstOdor;
+                            lastOdor2 = secondOdor;
+                        } else {
+                            firstOdor = lastOdor1;
+                            secondOdor = lastOdor2;
+                        }
+
+                        lastHit = hit;
+                        break;
+                    case _GONOGO_LR_TEACH:
+                        if (hit > lastHit || currentTrial == 0) {
+                            firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
+                            lastOdor1 = firstOdor;
                             secondOdor = -odorType;
                         } else {
-                            firstOdor = lastOdor;
+                            firstOdor = lastOdor1;
                             secondOdor = -odorType;
                         }
 
                         lastHit = hit;
                         break;
+
                     case _ASSOCIATE_SHAPPING_TASK:
                         firstOdor = (index == 0 || index == 2) ? odor_C : odor_D;
                         secondOdor = (firstOdor == odor_C) ? odor_B : odor_A;
@@ -748,7 +786,8 @@ void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int tria
 }
 
 void zxLaserTrial(int type, int firstOdor, float odorLength, float interOdorDelay, int secondOdor, float waterPeroid, int ITI, float delay_before_reward, int laserOnTrial) {
-    timerCounterJ = 0;
+    waitTrial();
+    resetTimerCounterJ();
     protectedSerialSend(Sptrialtype, type);
     protectedSerialSend(Splaser, laserOnTrial);
     assertLaser(type, fourSecBeforeFirstOdor, laserOnTrial);
@@ -776,9 +815,7 @@ void zxLaserTrial(int type, int firstOdor, float odorLength, float interOdorDela
     Out2 = 0;
     Nop();
     Nop();
-    Nop();
     Out3 = 0;
-    Nop();
     Nop();
     Nop();
     lcdWriteChar('d', 4, 1);
@@ -827,7 +864,7 @@ void zxLaserTrial(int type, int firstOdor, float odorLength, float interOdorDela
 
 
     assertLaser(type, atSecondOdorBeginning, laserOnTrial);
-    if (taskType == _GONOGO_LR_TASK || taskType == _GONOGO_TASK || taskType == _GONOGO_LR_TRAIN) {
+    if (taskType == _GONOGO_LR_TASK || taskType == _GONOGO_TASK || taskType == _GONOGO_LR_TEACH) {
         //Do nothing during Go Nogo Tasks
         assertLaser(type, atSecondOdorEnd, laserOnTrial);
     } else {
@@ -1323,6 +1360,16 @@ void callFunction(int n) {
         case 4322:
             variableVoltage();
             break;
+
+        case 4323:
+        {
+            splash("DNMS LR TEACH", "No Laser");
+            taskType = _DNMS_LR_TEACH;
+            laserTrialType = _LASER_NO_TRIAL;
+            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.05, 10, 20, 1.0);
+            break;
+        }
+
         case 4324:
             testPort();
             break;
@@ -1394,7 +1441,7 @@ void callFunction(int n) {
 
         case 4345:
         {
-            splash("DNMS 8s", "RQ DC laser");
+            splash("DNMS 8s ++", "RQ DC laser");
             laserTrialType = _LASER_EVERY_TRIAL;
             taskType = _DNMS_TASK;
             zxLaserSessions(3, laserDuringDelayChR2, 8, 16, 20, 0.05, 50, setSessionNum(), 1.0);
@@ -1431,7 +1478,7 @@ void callFunction(int n) {
 
         case 4355:
         {
-            splash("DNMS 8s", "RQ DC laser");
+            splash("DNMS 8s --", "RQ DC laser");
             laserTrialType = _LASER_OTHER_TRIAL;
             taskType = _DNMS_TASK;
             zxLaserSessions(3, laserDuringDelayChR2, 8, 16, 20, 0.05, 50, setSessionNum(), 1.0);
@@ -1531,7 +1578,7 @@ void callFunction(int n) {
             laserPeriod = laserDuring4Baseline;
             switch (m) {
                 case 1:
-                    taskType = _GONOGO_LR_TRAIN;
+                    taskType = _GONOGO_LR_TEACH;
                     laserTrialType = _LASER_NO_TRIAL;
                     break;
                 case 3:
@@ -1566,6 +1613,15 @@ void callFunction(int n) {
             break;
         }
 
+            //        case 4436:
+            //        {
+            //            splash("DNMS LR", "Laser EveryTrial");
+            //            taskType = _DNMS_LR_TASK;
+            //            laserTrialType = _LASER_EVERY_TRIAL;
+            //            zxLaserSessions(3, laserDelayDistractor, 5, 10, 20, 0.05, 200, 10, 1.0);
+            //            break;
+            //        }
+
         case 4441:
         {
             splash("First Odor LR", "Laser EveryTrial");
@@ -1598,3 +1654,255 @@ void callFunction(int n) {
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+/*For TONY's PPR TASK*/
+////////////////////////////////////////////////////////////////////////////////
+
+void pairPulse() {
+    int t = timerCounterJ;
+    Out4 = 1;
+    while (timerCounterJ < t + 5);
+    Out4 = 0;
+    while (timerCounterJ < t + 25);
+    Out4 = 1;
+    while (timerCounterJ < t + 30);
+    Out4 = 0;
+    Nop();
+    Nop();
+}
+
+void longWaterResult(int firstOdor, int secondOdor) {
+    ///////////Detect/////////////////
+    int longLickFlag = 0;
+    while (timerCounterJ < 13500) {
+        if (licking && !longLickFlag) {
+            longLickFlag = 1;
+            if (firstOdor != secondOdor) {
+                //Hit
+                Valve_ON(1, fullduty);
+                currentMiss = 0;
+                protectedSerialSend(SpHit, 1);
+                lcdWriteNumber(++hit, 3, 6, 1);
+            } else {
+                processFalse(1);
+            }
+        }
+    }
+    Valve_OFF(1);
+    if (!longLickFlag) {
+        if (firstOdor != secondOdor) {
+            processMiss(1);
+        } else {
+            protectedSerialSend(SpCorrectRejection, 1);
+            lcdWriteNumber(++correctRejection, 3, 10, 2);
+        }
+    }
+}
+
+void ppLaserTrial(int firstOdor, int secondOdor) {
+    resetTimerCounterJ();
+    Out6 = 1;
+    int i = 0;
+    for (; i < 1600; i++);
+    Out6 = 0;
+    while (timerCounterJ < 4500);
+    pairPulse();
+    while (timerCounterJ < 5000);
+    Valve_ON(firstOdor, fullduty);
+    int firstSend;
+    if (firstOdor == 2 || firstOdor == 5 || firstOdor == 7) {
+        firstSend = 9;
+        Out2 = 1;
+    } else {
+        firstSend = 10;
+        Out3 = 1;
+    }
+    protectedSerialSend(firstSend, firstOdor);
+    lcdWriteChar('1', 4, 1);
+    while (timerCounterJ < 5500);
+    pairPulse();
+    while (timerCounterJ < 6000);
+    Valve_OFF(firstOdor);
+    Out2 = 0;
+    Nop();
+    Nop();
+    Out3 = 0;
+    Nop();
+    Nop();
+    lcdWriteChar('d', 4, 1);
+    //    protectedSerialSend(firstSend, 0);
+    while (timerCounterJ < 10000);
+    pairPulse();
+    while (timerCounterJ < 11000);
+    ///////////-Second odor-/////////////////
+    Valve_ON(secondOdor, fullduty);
+    int secondSend;
+    if (secondOdor == 2 || secondOdor == 5 || secondOdor == 7) {
+        secondSend = 9;
+        Out2 = 1;
+    } else {
+        secondSend = 10;
+        Out3 = 1;
+    }
+    protectedSerialSend(secondSend, secondOdor);
+    lcdWriteChar('2', 4, 1);
+    while (timerCounterJ < 11500);
+    pairPulse();
+    while (timerCounterJ < 12000);
+    Valve_OFF(secondOdor);
+    lcdWriteChar('D', 4, 1);
+    Out2 = 0;
+    Nop();
+    Nop();
+    Out3 = 0;
+    Nop();
+    Nop();
+    protectedSerialSend(secondSend, 0);
+
+    ////////-delay before reward-///////
+    while (timerCounterJ < 13000);
+    lcdWriteChar('R', 4, 1);
+
+    //Assess Performance here
+    longWaterResult(firstOdor, secondOdor);
+    while (timerCounterJ < 14000);
+    pairPulse();
+    // Total Trials
+    int totalTrials = hit + correctRejection + miss + falseAlarm;
+    lcdWriteNumber(totalTrials, 3, 14, 2);
+    // Discrimination rate
+    if (hit + correctRejection > 0) {
+        correctRatio = 100 * (hit + correctRejection) / totalTrials;
+        lcdWriteNumber(correctRatio, 2, 14, 1);
+    }
+    lcdWriteChar('I', 4, 1);
+    ///--ITI1---///
+    while (timerCounterJ < 20490);
+    protectedSerialSend(SpITI, 0);
+}
+
+int ppLaserSessions(int trialsPerSession, int missLimit, int totalSession) {
+    initZXTMR();
+    int currentTrial = 0;
+    int currentSession = 0;
+
+    while ((currentMiss < missLimit) && (currentSession++ < totalSession)) {
+        //        protectedSerialSend(SpOdorDelay, delay);
+        protectedSerialSend(SpSess, 1);
+
+        splash("    H___M___ __%", "S__ F___C___t___");
+
+        lcdWriteNumber(currentSession, 2, 2, 2);
+        hit = miss = falseAlarm = correctRejection = 0;
+        unsigned int shuffledList[4];
+        int firstOdor, secondOdor;
+        for (currentTrial = 0; currentTrial < trialsPerSession && currentMiss < missLimit;) {
+            shuffleArray(shuffledList, 4);
+            int iter;
+            for (iter = 0; iter < 4 && currentMiss < missLimit; iter++) {
+                int index = shuffledList[iter];
+                switch (taskType) {
+                    case _DNMS_TASK:
+                        firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
+                        secondOdor = (index == 1 || index == 2) ? odor_A : odor_B;
+                        break;
+                    case _SHAPPING_TASK:
+                        firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
+                        secondOdor = (firstOdor == odor_A) ? odor_B : odor_A;
+                        break;
+                }
+                lcdWriteChar(odorTypes[firstOdor], 1, 1);
+                lcdWriteChar(odorTypes[secondOdor], 2, 1);
+
+                ppLaserTrial(firstOdor, secondOdor);
+                currentTrial++;
+            }
+        }
+        protectedSerialSend(SpSess, 0);
+    }
+    protectedSerialSend(SpTrain, 0); // send it's the end
+    return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/*For TONY's PPR TASK*/
+////////////////////////////////////////////////////////////////////////////////

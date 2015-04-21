@@ -26,7 +26,7 @@ int main(void) {
     Flags.pun = 0;
 
     //splash("Guys, WRITE YOUR", "HEADER FILE !!!");
-    splash("Mice Trainer",zxVer);
+    splash("Mice Trainer", zxVer);
 
     while (1) {
         unsigned int n = getFuncNumber(4, "Main Function ?");
@@ -42,15 +42,9 @@ int main(void) {
             case 1113:
                 test_odorB();
                 break;
-            case 1114:
-                Valve_ON(4, period / 5);
-                break;
             case 1115:
-                test_odorD();
+                ppLaserSessions(20, 20, 20);
                 break;
-//            case 1121:
-//                test_Laser();
-//                break;
             case 1122:
                 test_lick();
                 break;
@@ -66,45 +60,45 @@ int main(void) {
             case 1135:
                 AA_BB_Go(5, 10, 1.0, 0.5);
                 break;
-           
+
                 ///////Ld functions
 
-             
-//          case 1511 ... 1555:
-//                callLDFunction(n);
-//                break;
+
+                //          case 1511 ... 1555:
+                //                callLDFunction(n);
+                //                break;
                 /////////////CQ functions//////////////////*/
             case 2111 ... 2222:
                 CQFunction(n);
                 break;
                 ////////////////LD functions/////////////
- //           case 3354:
- //               pico(1000, 1000);
- //             break;
-//            case 3355:
-//                pico(100, 900);
-//                break;
-                 //hz's functions
-//            case 2511 ... 2555:
-//                FuncID(n);
-//                break;
+                //           case 3354:
+                //               pico(1000, 1000);
+                //             break;
+                //            case 3355:
+                //                pico(100, 900);
+                //                break;
+                //hz's functions
+                //            case 2511 ... 2555:
+                //                FuncID(n);
+                //                break;
                 //zx's functions
-//            case 2311 ... 2455:
-//                XW_TaskMenu(n) ;
-//                break;
+                //            case 2311 ... 2455:
+                //                XW_TaskMenu(n) ;
+                //                break;
             case 4311 ... 4455:
                 callFunction(n);
                 break;
-//            case 5111 ... 5255://gcf function
-//               GCFFunction(n);
-//               break;
-         /*   case 5554:
-                cue_lyd ();
-               break;
-            case 5553:
-               n = getFuncNumber(1, "1=Const 2=Rand");
-                lydGoNogoSessions(n==1);
-                break;*/
+                //            case 5111 ... 5255://gcf function
+                //               GCFFunction(n);
+                //               break;
+                /*   case 5554:
+                       cue_lyd ();
+                      break;
+                   case 5553:
+                      n = getFuncNumber(1, "1=Const 2=Rand");
+                       lydGoNogoSessions(n==1);
+                       break;*/
             case 5555:
                 odorDepeltion(120);
                 break;

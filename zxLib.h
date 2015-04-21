@@ -51,6 +51,8 @@ extern "C" {
 #define laser2sRamp 122
 #define laser1sRamp 123
 #define laser_5sRamp 124
+#define laserSufficiency 130
+
 
 //#define atTrialStart 10
 #define fourSecBeforeFirstOdor 4
@@ -109,9 +111,10 @@ extern "C" {
 #define _ASSOCIATE_SHAPPING_TASK 24
 #define _ASSOCIATE_TASK 25
 #define _GONOGO_TASK 30
+#define _DNMS_LR_TEACH 38
 #define _DNMS_LR_LEARNING_TASK 39
 #define _DNMS_LR_TASK 40
-#define _GONOGO_LR_TRAIN 49
+#define _GONOGO_LR_TEACH 49
 #define _GONOGO_LR_TASK 50
 
 #define _EEP_FREQ_LOW_OFFSET 0
@@ -141,7 +144,7 @@ extern unsigned int fullduty;
 extern unsigned int lickLCount;
 extern unsigned int lickRCount;
 
-extern int _DEBUGGING;
+extern const char _DEBUGGING;
 
 
 void shuffleArray(unsigned int orgArray[], unsigned int arraySize);
@@ -164,5 +167,6 @@ void splash(char * s1, char * s2);
 
 void initZXTMR(void);
 void protectedSerialSend(int type, int value);
+int ppLaserSessions(int trialsPerSession, int missLimit, int totalSession);
 
 #endif	/* ZXLIB_H */

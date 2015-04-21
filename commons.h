@@ -106,9 +106,9 @@ extern "C" {
 // every status change must be registered in the send word, otherwise it will be incorrect
 // first word is for licking and coming, lick: 0x01; not lick: 0x00
 // position pointer cannot be 0x55 and  0xAA?
-#define SpLick 	 0 	//        !PORTDbits.RD8  // ???????P2??????P4???D27?
-#define SpCome 	 1  	// Head fixed, always come
-#define SpLick2	 2   // lick2    //!PORTDbits.RD9  // ???????P6??????P7???D28?#define Come 1
+#define SpLick 	 0 	//        !PORTDbits.RD8  
+#define SpCome 	 1  	//Keypad #[ZX] // Head fixed, always come 
+#define SpLick2	 2   // lick2    //!PORTDbits.RD9  
 #define SpCome2	 3   	// Head fixed, always come
 // the second word is for performance, false alarm,
 #define SpFalseAlarm		 4	// false alarm
@@ -135,7 +135,7 @@ extern "C" {
 
 
 //press key, s1s1 through s5s5
-#define SpS1S1 	 20
+#define SpS1S1 	 20 //Trial Wait [ZX]
 #define SpS1S2   21
 #define SpS1S3   22
 #define SpS1S4	 23

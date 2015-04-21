@@ -69,8 +69,15 @@ void InitTMR3(void) {
     ConfigIntTimer3(T3_INT_PRIOR_4 & T3_INT_ON);
 }
 
+void safe_wait_ms(int duration) {
+    int i;
+    while(duration-->0){
+        for(i=0;i<1600;i++);
+    }
+}
+
 void Init_LCD(void) {
-    DelayNmSecNew(15);
+    safe_wait_ms(15);
 
     DATA &= 0xFF00;
     RW = 0;
@@ -91,7 +98,7 @@ void Init_LCD(void) {
     Nop();
     Nop();
     E = 0;
-    DelayNmSecNew(5);
+    safe_wait_ms(5);
 
     /* 2nd LCD initialization sequence */
     DATA &= 0xFF00;
@@ -132,7 +139,7 @@ void lcd_cmd(char cmd) {
     Nop();
     Nop();
     E = 0;
-    DelayNmSecNew(5);
+    safe_wait_ms(5);
 }
 
 void lcd_data(char data) {
@@ -236,7 +243,7 @@ void Check_Key(void) {
         } else if (col3 == 0)
             key_val = 0;
     }
-    DelayNmSecNew(300);
+    safe_wait_ms(300);
 
 }
 
@@ -246,7 +253,7 @@ void Key_Event(void) {
     tmp = key_port;
     if ((hardwareKeyPressed == 0) && ((tmp & 0x000F) != 0x000F)) {
         hardwareKeyPressed = 1;
-        DelayNmSecNew(15);
+        safe_wait_ms(15);
         Check_Key();
 
     } else if ((hardwareKeyPressed == 1) && ((tmp & 0x000F) == 0x000F)) {
@@ -397,26 +404,17 @@ void Valve_OFF(unsigned int N) {
     }
 }
 
-//void DelayNmSec(unsigned int N) {
-//    unsigned int j;
-//    while (N--)
-//        for (j = 0; j < MILLISEC; j++);
-//}
-
 void DelayNuSec(unsigned int N) {
-    if(_DEBUGGING) return;
-    int i=0;
-    for (; i < N * 1.6f; i++);
-    //    unsigned int j;
-    //    while (N--)
-    //        for (j = 0; j < uSEC; j++);
+    if (_DEBUGGING) return;
+    int i = N * 1.6f;
+    for (; i > 0; i--);
 }
 
 void DelayNmSecNew(unsigned int N) {
     if (_DEBUGGING) return; //DEBUG
     timerCounterJ = 0;
     while (timerCounterJ < N) {
-//        Nop();
+        //        Nop();
     }
 }
 
@@ -430,11 +428,6 @@ void localSendOnce(int thisSp, int thisValue) {
     UartSend[2] = thisValue;
     Puts_UART2((unsigned char*) &UartSend[0], sizeof (UartSend));
 }
-
-//void ErrorUartSend(void) {
-//
-//    Puts_UART2((unsigned char*) &UartSend[0], sizeof (UartSend));
-//}
 
 void counts_dispose(unsigned int counter) {
     ones = 0;
@@ -508,7 +501,7 @@ unsigned int getFuncNumber(int targetDigits, char* input) {
         for (iter1 = 0; iter1 < targetDigits; iter1++) {
             lcd_data(bitValue[iter1] + 0x30);
         }
-        DelayNmSecNew(300);
+        safe_wait_ms(300);
     }
     n = 0;
     for (iter1 = 0; iter1 < targetDigits; iter1++) {
@@ -517,58 +510,4 @@ unsigned int getFuncNumber(int targetDigits, char* input) {
     return n;
 }
 
-//
-//void NewDigt_out(unsigned int Nchan, float Duration) {
-//    switch (Nchan) {
-//        case 1:
-//            Out1 = 1;
-//            //DelayNmSec(Duration*1000);
-//
-//            timerCounterI = 0;
-//            while (timerCounterI < Duration * 1000) {
-//            }
-//
-//            Out1 = 0;
-//            break;
-//
-//        case 2:
-//            Out2 = 1;
-//
-//            DelayNmSec(Duration * 1000);
-//
-//            Out2 = 0;
-//            break;
-//
-//        case 3:
-//            Out3 = 1;
-//
-//            DelayNmSec(Duration * 1000);
-//
-//            Out3 = 0;
-//            break;
-//        case 4:
-//            Out4 = 1;
-//
-//            DelayNmSec(Duration * 1000);
-//            Out4 = 0;
-//            break;
-//
-//        case 5:
-//            Out5 = 1;
-//
-//            DelayNmSec(Duration * 1000);
-//
-//            Out5 = 0;
-//            break;
-//        case 6:
-//            Out6 = 1;
-//
-//            DelayNmSec(Duration * 1000);
-//
-//            Out6 = 0;
-//            break;
-//        default:
-//            break;
-//    }
-//}
-//
+
