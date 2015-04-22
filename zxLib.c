@@ -186,14 +186,27 @@ void protectedSerialSend(int type, int value) {
 
 void turnOnLaser() {
     laserTimer = 0;
+    laserTimerOn = 1;
+    Out4 = 0;
+    Nop();
+    Nop();
+    Out5 = 0;
+    Nop();
+    Nop();
+    PDC4 = pwmDutyCycleLo;
     lcdWriteChar('L', 4, 1);
     protectedSerialSend(SpLaserSwitch, 1);
-    laserTimerOn = 1;
 }
 
 void turnOffLaser() {
-
     laserTimerOn = 0;
+    Out4 = 0;
+    Nop();
+    Nop();
+    Out5 = 0;
+    Nop();
+    Nop();
+    PDC4 = 0xfe;
     lcdWriteChar('.', 4, 1);
     protectedSerialSend(SpLaserSwitch, 0);
 }
@@ -1300,29 +1313,31 @@ void stepLaser() {
     int sCounter = 0;
     PORTCbits.RC1 = 1;
     PDC4 = 0xfe;
-    splash("Power", "Trial");
-    for (; sCounter < 3; sCounter++)
+    splash("P", "Trial");
+    for (; sCounter < 3; sCounter++) {
         lcdWriteNumber(strength[sCounter], 3, 7, 1);
-    step = 20;
-    for (; step > 0; step--) {
-        lcdWriteNumber(step, 2, 7, 2);
-        wait_ms(laserOff);
-        Out4 = 1;
-        int timer = 1600;
-        for (; timer > 0; timer--);
-        Out4 = 0;
-        int pulseDelay = strength[sCounter];
-        for (; pulseDelay > 0; pulseDelay--) {
+        step = 20;
+        for (; step > 0; step--) {
+            lcdWriteNumber(step, 2, 7, 2);
+            wait_ms(laserOff);
+            Out4 = 1;
+            int timer = 1600;
+            for (; timer > 0; timer--);
+            Out4 = 0;
+            int pulseDelay = strength[sCounter];
+            for (; pulseDelay > 0; pulseDelay--) {
+                timer = 1600;
+                for (; timer > 0; timer--);
+            }
+            Out2 = 1;
             timer = 1600;
             for (; timer > 0; timer--);
+            Out2 = 0;
+            pwmDutyCycleLo = strength[sCounter];
+            turnOnLaser();
+            wait_ms(laserOn);
+            turnOffLaser();
         }
-        Out4 = 1;
-        timer = 1600;
-        for (; timer > 0; timer--);
-        Out4 = 0;
-        PDC4 = strength[sCounter];
-        wait_ms(laserOn);
-        PDC4 = 0xfe;
     }
 }
 
