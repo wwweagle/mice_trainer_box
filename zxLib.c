@@ -1292,6 +1292,40 @@ void test_Laser(void) {
     }
 }
 
+void stepLaser() {
+    int laserOn = 3000;
+    int laserOff = 16000;
+    int step = 20;
+    int strength[] = {100, 150, 200};
+    int sCounter = 0;
+    PORTCbits.RC1 = 1;
+    PDC4 = 0xfe;
+    splash("Power", "Trial");
+    for (; sCounter < 3; sCounter++)
+        lcdWriteNumber(strength[sCounter], 3, 7, 1);
+    step = 20;
+    for (; step > 0; step--) {
+        lcdWriteNumber(step, 2, 7, 2);
+        wait_ms(laserOff);
+        Out4 = 1;
+        int timer = 1600;
+        for (; timer > 0; timer--);
+        Out4 = 0;
+        int pulseDelay = strength[sCounter];
+        for (; pulseDelay > 0; pulseDelay--) {
+            timer = 1600;
+            for (; timer > 0; timer--);
+        }
+        Out4 = 1;
+        timer = 1600;
+        for (; timer > 0; timer--);
+        Out4 = 0;
+        PDC4 = strength[sCounter];
+        wait_ms(laserOn);
+        PDC4 = 0xfe;
+    }
+}
+
 void callFunction(int n) {
     currentMiss = 0;
     pwmDutyCycleLo = read_eeprom(_EEP_FREQ_LOW_OFFSET);
@@ -1340,6 +1374,10 @@ void callFunction(int n) {
             ramp = 500;
             zxLaserSessions(setType(), laserDuringDelay, 8, 16, 20, 0.05, 15, 25, 1.0);
             ramp = 0;
+            break;
+
+        case 4316:
+            stepLaser();
             break;
         case 4321:
             //            setLaser();
