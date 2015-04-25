@@ -71,8 +71,8 @@ void InitTMR3(void) {
 
 void safe_wait_ms(int duration) {
     int i;
-    while(duration-->0){
-        for(i=0;i<1600;i++);
+    while (duration-- > 0) {
+        for (i = 0; i < 1000; i++);
     }
 }
 
@@ -404,10 +404,10 @@ void Valve_OFF(unsigned int N) {
     }
 }
 
-void DelayNuSec(unsigned int N) {
+void DelayNuSec(unsigned int n) {
     if (_DEBUGGING) return;
-    int i = N * 1.6f;
-    for (; i > 0; i--);
+    int i;
+    for (i = 0; i < n; i++);
 }
 
 void DelayNmSecNew(unsigned int N) {
