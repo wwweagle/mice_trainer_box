@@ -86,10 +86,10 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
 
     if (laserTimerOn && (laserTimer % (laserOnTime + laserOffTime) < laserOnTime)) {
         //    if (laserTimerOn) {
-        Out4 = 1;
+        Out4 = laserTimerOn % 2;
         __builtin_nop();
         __builtin_nop();
-        Out5 = 1;
+        Out5 = (laserTimerOn >> 1) % 2;
         PDC4 = pwmDutyCycleLo;
         ramping = ramp;
 
@@ -201,15 +201,18 @@ void protectedSerialSend(int type, int value) {
     IEC0bits.T3IE = 1;
 }
 
-void turnOnLaser() {
+void turnOnLaser(int i) {
     laserTimer = 0;
-    laserTimerOn = 1;
-    Out4 = 0;
+    laserTimerOn = i;
+
+    Out4 = i % 2;
     Nop();
     Nop();
-    Out5 = 0;
+
+    Out5 = (i >> 1) % 2;
     Nop();
     Nop();
+
     PDC4 = pwmDutyCycleLo;
     lcdWriteChar('L', 4, 1);
     protectedSerialSend(SpLaserSwitch, 1);
@@ -233,56 +236,56 @@ void assertLaser(int type, int step, int currentTrial) {
         switch (type) {
             case laserDuringBeginningToOneSecInITI:
                 if (step == atFirstOdorBeginning) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atITIOneSecIn) {
                     turnOffLaser();
                 }
                 break;
             case laserDuringDelay:
                 if (step == atFirstOdorEnd) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLast200mSBegin) {
                     turnOffLaser();
                 }
                 break;
             case laserDuringDelayChR2:
                 if (step == atDelay1SecIn) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLastSecBegin) {
                     turnOffLaser();
                 }
                 break;
             case laserDuringBaselineNDelay:
                 if (step == atDelay1SecIn || step == threeSecBeforeFirstOdor) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLastSecBegin || step == at200mSBeforeFirstOdor) {
                     turnOffLaser();
                 }
                 break;
             case laserDuringOdor:
                 if (step == atFirstOdorBeginning || step == atSecondOdorBeginning) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atFirstOdorEnd || step == atSecondOdorEnd) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring1stOdor:
                 if (step == atFirstOdorBeginning) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atFirstOdorEnd) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring2ndOdor:
                 if (step == atSecondOdorBeginning) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atSecondOdorEnd) {
                     turnOffLaser();
                 }
                 break;
             case laserDuringEarlyHalf:
                 if (step == atDelayBegin) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayMiddle) {
                     turnOffLaser();
                 }
@@ -290,105 +293,105 @@ void assertLaser(int type, int step, int currentTrial) {
 
             case laserDuringLateHalf:
                 if (step == atDelayMiddle) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atSecondOdorBeginning) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring1Terice:
                 if (step == atDelayBegin) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelay2SecIn) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring2Terice:
                 if (step == atDelay2SecIn) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLast2SecBegin) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring3Terice:
                 if (step == atDelayLast2SecBegin) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atSecondOdorBeginning) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring1Quarter:
                 if (step == atDelayBegin) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelay1_5SecIn) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring2Quarter:
                 if (step == atDelay2SecIn) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelay_5ToMiddle) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring3Quarter:
                 if (step == atDelayMiddle) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLast2_5SecBegin) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring4Quarter:
                 if (step == atDelayLast2SecBegin) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLast500mSBegin) {
                     turnOffLaser();
                 }
                 break;
             case laserDuringResponseDelay:
                 if (step == atSecondOdorEnd) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atRewardBeginning) {
                     turnOffLaser();
                 }
                 break;
             case laserNoDelayControl:
                 if (step == oneSecBeforeFirstOdor) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atRewardBeginning) {
                     turnOffLaser();
                 }
                 break;
             case laserNoDelayControlShort:
                 if (step == atFirstOdorBeginning) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atSecondOdorEnd) {
                     turnOffLaser();
                 }
                 break;
             case laserDuringBaseline:
                 if (step == threeSecBeforeFirstOdor) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atFirstOdorBeginning) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring3Baseline:
                 if (step == fourSecBeforeFirstOdor) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == oneSecBeforeFirstOdor) {
                     turnOffLaser();
                 }
                 break;
             case laserDuring4Baseline:
                 if (step == fourSecBeforeFirstOdor) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == at200mSBeforeFirstOdor) {
                     turnOffLaser();
                 }
                 break;
             case laserDuringBaseAndResponse:
                 if (step == oneSecBeforeFirstOdor || step == atSecondOdorEnd) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == at200mSBeforeFirstOdor || step == atRewardBeginning) {
 
                     turnOffLaser();
@@ -396,35 +399,35 @@ void assertLaser(int type, int step, int currentTrial) {
                 break;
             case laser4sRamp:
                 if (step == atDelay_5SecIn) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLast500mSBegin) {
                     turnOffLaser();
                 }
                 break;
             case laser2sRamp:
                 if (step == atDelayLast2_5SecBegin) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLast500mSBegin) {
                     turnOffLaser();
                 }
                 break;
             case laser1sRamp:
                 if (step == atDelayLast1_5SecBegin) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLast500mSBegin) {
                     turnOffLaser();
                 }
                 break;
             case laser_5sRamp:
                 if (step == atDelayLastSecBegin) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelayLast500mSBegin) {
                     turnOffLaser();
                 }
                 break;
             case laserDelayDistractor:
                 if (step == atDelay1SecIn) {
-                    turnOnLaser();
+                    turnOnLaser(3);
                 } else if (step == atDelay2SecIn) {
                     turnOffLaser();
                 }
@@ -1039,7 +1042,7 @@ void osci() {
         lcdWriteNumber(ramp, 4, 10, 1);
         lcdWriteNumber(trial + 1, 2, 1, 2);
         wait_ms(4000);
-        turnOnLaser();
+        turnOnLaser(3);
         wait_ms(2000);
         turnOffLaser();
         wait_ms(2000);
@@ -1243,7 +1246,7 @@ void laserTrain() {
     for (idx = 0; idx < 6; idx++) {
         unsigned int duration = 1000 / freqs[idx];
         laserOffTime = duration - laserOnTime;
-        turnOnLaser();
+        turnOnLaser(3);
         wait_ms(duration * 10 - 1);
         laserTimerOn = 0;
         turnOffLaser();
@@ -1363,7 +1366,7 @@ void stepLaser() {
             Out2 = 1;
             for (timer = 0; timer < 1000; timer++);
             Out2 = 0;
-            turnOnLaser();
+            turnOnLaser(3);
             wait_ms(laserOn);
             turnOffLaser();
         }
@@ -1388,8 +1391,8 @@ void callFunction(int n) {
             //ZX's functions
         case 4300:
         case 4318:
-            splash("No Trial Wait","");
-            wait_Trial=0;
+            splash("No Trial Wait", "");
+            wait_Trial = 0;
             break;
         case 4311:
             testVolume();
