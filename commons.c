@@ -337,10 +337,10 @@ void Init_PWM(void) {
     SetMCPWMDeadTimeGeneration(PWM_DTBPS8 &
             PWM_DTA54 & PWM_DTAPS8 & PWM_DTB54);
 
-    period = 0x7E;
+    period = 0x7e;
     sptime = 0x0;
     config1 = (PWM_EN & PWM_IDLE_STOP & PWM_OP_SCALE16 &
-            PWM_IPCLK_SCALE16 & PWM_MOD_FREE);
+            PWM_IPCLK_SCALE4 & PWM_MOD_FREE);
 
     config2 = (PWM_PEN4L & PWM_PEN3H & PWM_PEN2H & PWM_PEN1H &
             PWM_PEN4H & PWM_PEN3L & PWM_PEN2L & PWM_PEN1L &
@@ -351,7 +351,7 @@ void Init_PWM(void) {
     OpenMCPWM(period, sptime, config1, config2, config3);
 
     PORTCbits.RC1 = 1;
-    PDC4 = 0xfe;
+    PDC4 = fullduty;
 }
 
 void Valve_ON(unsigned int N, unsigned int rate) {

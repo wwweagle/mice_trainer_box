@@ -26,6 +26,8 @@ extern "C" {
 #define laserDuringDelay 10
 #define laserDuringDelayChR2 11
 #define laserDelayDistractor 12
+#define laserLDuringDelay 15
+#define laserRDuringDelay 16
 #define laserDuringOdor 20
 #define laserDuring1stOdor 21
 #define laserDuring2ndOdor 22
@@ -95,8 +97,9 @@ extern "C" {
 //#define laserFollowOdorB 5
 //#define laser1and2Half 6
 //#define laser3and4Quarter 10
-#define laserEachQuarter 20
-#define laserVaryLength 30
+#define _LASER_EACH_QUARTER 20
+#define _LASER_VARY_LENGTH 30
+#define _LASER_LR_EVERYTRIAL 40
 //#define laserCycleDelayLaser 30
 
 #define _LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
@@ -117,8 +120,10 @@ extern "C" {
 #define _GONOGO_LR_TEACH 49
 #define _GONOGO_LR_TASK 50
 
-#define _EEP_FREQ_LOW_OFFSET 0
-#define _EEP_FREQ_HIGH_OFFSET 2
+#define _EEP_DUTY_LOW_L_OFFSET 0
+#define _EEP_DUTY_HIGH_L_OFFSET 2
+#define _EEP_DUTY_LOW_R_OFFSET 4
+#define _EEP_DUTY_HIGH_R_OFFSET 6
 
 //extern float odorLength;
 extern char* zxVer;
@@ -131,8 +136,8 @@ extern unsigned int laserOffTime ;
 
 extern unsigned int ramp;
 extern unsigned int ramping;
-extern unsigned int pwmDutyCycleHi;
-extern unsigned int pwmDutyCycleLo;
+extern unsigned char pwmDutyCycleHiR;
+extern unsigned char pwmDutyCycleLoR;
 extern unsigned int laserTimerOn;
 extern unsigned int licking;
 extern const char odorTypes[];
@@ -154,7 +159,7 @@ void lcdWriteString(char* s);
 
 void odorDepeltion(int totalTrial);
 
-//void zxDNMSSwitchTrial(int DNMS, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int IntervalIn, float delay_before_reward);
+//void zxDNMSSwiFtchTrial(int DNMS, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int IntervalIn, float delay_before_reward);
 void zxLaserTrial(int type, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
 void callFunction(int n);
 

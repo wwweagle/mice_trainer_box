@@ -7,7 +7,7 @@
 
 const char _DEBUGGING = 0;
 
-char* zxVer = "z5425";
+char* zxVer = "z5429";
 float odorLength = 1.0;
 
 unsigned int laserTimer = 0;
@@ -15,8 +15,10 @@ unsigned int laserOnTime = 65535;
 unsigned int laserOffTime = 0;
 unsigned int ramp = 0;
 unsigned int ramping = 0;
-unsigned int pwmDutyCycleHi = 0xfe;
-unsigned int pwmDutyCycleLo = 0;
+unsigned char pwmDutyCycleHiR = 0xfe;
+unsigned char pwmDutyCycleHiL = 0xfe;
+unsigned char pwmDutyCycleLoR = 0;
+unsigned char pwmDutyCycleLoL = 0;
 unsigned int laserTimerOn = 0;
 unsigned int licking = 0;
 const char odorTypes[] = {' ', 'W', 'B', 'J', 'w', 'R', 'Q', 'r', 'q'};
@@ -24,7 +26,7 @@ unsigned int timeFilter = 0;
 unsigned int laserTrialType = _LASER_EVERY_TRIAL;
 unsigned int taskType = _DNMS_TASK;
 unsigned int lickFlag = 0;
-unsigned int fullduty = 0xFE;
+unsigned int fullduty = 0xfe;
 unsigned int lickLCount = 0;
 unsigned int lickRCount = 0;
 unsigned int wait_Trial = 1;
@@ -90,7 +92,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         __builtin_nop();
         __builtin_nop();
         Out5 = (laserTimerOn >> 1) % 2;
-        PDC4 = pwmDutyCycleLo;
+        PDC4 = pwmDutyCycleLoR;
         ramping = ramp;
 
 
@@ -100,10 +102,10 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         __builtin_nop();
         Out5 = 0;
         if (ramping > 0) {
-            PDC4 = (pwmDutyCycleHi - pwmDutyCycleLo) * (1 - ((float) ramping / ramp)) + pwmDutyCycleLo;
+            PDC4 = (pwmDutyCycleHiR - pwmDutyCycleLoR) * (1 - ((float) ramping / ramp)) + pwmDutyCycleLoR;
             ramping -= 5;
         } else {
-            PDC4 = 0xfe;
+            PDC4 = fullduty;
         }
 
     }
@@ -213,9 +215,9 @@ void turnOnLaser(int i) {
     Nop();
     Nop();
 
-    PDC4 = pwmDutyCycleLo;
+    PDC4 = pwmDutyCycleLoR;
     lcdWriteChar('L', 4, 1);
-    protectedSerialSend(SpLaserSwitch, 1);
+    protectedSerialSend(SpLaserSwitch, i);
 }
 
 void turnOffLaser() {
@@ -429,6 +431,20 @@ void assertLaser(int type, int step, int currentTrial) {
                 if (step == atDelay1SecIn) {
                     turnOnLaser(3);
                 } else if (step == atDelay2SecIn) {
+                    turnOffLaser();
+                }
+                break;
+            case laserLDuringDelay:
+                if (step == atDelay1SecIn) {
+                    turnOnLaser(1);
+                } else if (step == atDelayLast500mSBegin) {
+                    turnOffLaser();
+                }
+                break;
+            case laserRDuringDelay:
+                if (step == atDelay1SecIn) {
+                    turnOnLaser(2);
+                } else if (step == atDelayLast500mSBegin) {
                     turnOffLaser();
                 }
                 break;
@@ -667,7 +683,7 @@ void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int tria
     int currentTrial = 0;
     int currentSession = 0;
 
-    protectedSerialSend(SpValve8, pwmDutyCycleLo);
+    protectedSerialSend(SpValve8, pwmDutyCycleLoR);
     protectedSerialSend(SpStepN, taskType);
 
     while ((currentMiss < missLimit) && (currentSession++ < totalSession)) {
@@ -762,7 +778,7 @@ void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int tria
                         laserCurrentTrial = currentTrial % 2;
                         break;
 
-                    case laserEachQuarter:
+                    case _LASER_EACH_QUARTER:
                         switch (currentTrial % 5) {
                             case 0:
                                 laserCurrentTrial = 0;
@@ -784,7 +800,7 @@ void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int tria
                                 laserCurrentTrial = 1;
                                 break;
                         }
-                    case laserVaryLength:
+                    case _LASER_VARY_LENGTH:
                         switch (currentTrial % 5) {
                             case 0:
                                 laserCurrentTrial = 0;
@@ -807,6 +823,10 @@ void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int tria
                                 break;
                         }
                         break;
+                    case _LASER_LR_EVERYTRIAL:
+                        laserType = (firstOdor == 2 || firstOdor == 5 || firstOdor == 7) ? laserLDuringDelay : laserRDuringDelay;
+                        laserCurrentTrial = 1;
+                        break;
                 }
                 zxLaserTrial(laserType, firstOdor, odorLength, delay, secondOdor, WaterLen, ITI, delay_before_reward, laserCurrentTrial);
                 currentTrial++;
@@ -819,8 +839,6 @@ void zxLaserSessions(int odorType, int laserType, float delay, int ITI, int tria
 }
 
 void zxLaserTrial(int type, int firstOdor, float odorLength, float interOdorDelay, int secondOdor, float waterPeroid, int ITI, float delay_before_reward, int laserOnTrial) {
-    waitTrial();
-
     resetTimerCounterJ();
     protectedSerialSend(Sptrialtype, type);
     protectedSerialSend(Splaser, laserOnTrial);
@@ -954,14 +972,70 @@ void zxLaserTrial(int type, int firstOdor, float odorLength, float interOdorDela
     assertLaser(type, atITIOneSecIn, laserOnTrial);
     waitJ(ITI * 1000 - 5000); //another 4000 is at the beginning of the trials.
     protectedSerialSend(SpITI, 0);
+    waitTrial();
 }
 
-void delaymSecKey(unsigned int N) {
+void delaymSecKey(unsigned int N, unsigned int type) {
     timerCounterI = 0;
     while (timerCounterI < N) {
         Key_Event();
         if (hardwareKey == 1 || u2Received > 0) {
-            laserTimerOn = (laserTimerOn + 1) % 2;
+            switch (type) {
+                case 1:
+                    laserTimerOn = (laserTimerOn + 1) % 2;
+                    break;
+                case 2:
+                case 3:
+                    ;
+                    unsigned char * hi = type == 2 ? &pwmDutyCycleHiL : &pwmDutyCycleHiR;
+                    unsigned char * lo = type == 2 ? &pwmDutyCycleLoL : &pwmDutyCycleLoR;
+                    int key = 0;
+                    if (u2Received > 0) {
+                        key = u2Received - 0x30;
+                        u2Received = -1;
+                    } else {
+                        Key_Event();
+                        if (hardwareKey == 1) {
+                            hardwareKey = 0;
+                            key = key_val;
+                        }
+                    }
+                    switch (key) {
+                        case 1:
+                            *hi -= 10;
+                            break;
+                        case 2:
+                            *hi -= 2;
+                            break;
+                        case 3:
+                            *hi += 2;
+                            break;
+                        case 4:
+                            *hi += 10;
+                            break;
+                        case 5:
+                            write_eeprom(type == 2 ? _EEP_DUTY_HIGH_L_OFFSET : _EEP_DUTY_HIGH_R_OFFSET, *hi);
+                            break;
+                        case 6:
+                            lo -= 10;
+                            break;
+                        case 7:
+                            lo -= 2;
+                            break;
+                        case 8:
+                            lo += 2;
+                            break;
+                        case 9:
+                            lo += 10;
+                            break;
+                        case 0:
+                            write_eeprom(type == 2 ? _EEP_DUTY_LOW_L_OFFSET : _EEP_DUTY_LOW_R_OFFSET, *lo);
+                            break;
+                    }
+                    protectedSerialSend(SpValve8, * lo);
+                    protectedSerialSend(SpValve8, *hi);
+                    break;
+            }
             hardwareKey = 0;
             u2Received = -1;
         }
@@ -989,7 +1063,7 @@ void odorDepeltion(int totalTrial) {
         Nop();
         Nop();
         Valve_ON(2, fullduty);
-        delaymSecKey(15000);
+        delaymSecKey(15000, 1);
         Valve_OFF(5);
         Nop();
         Nop();
@@ -1000,7 +1074,7 @@ void odorDepeltion(int totalTrial) {
         Nop();
         Nop();
         Valve_ON(3, fullduty);
-        delaymSecKey(15000);
+        delaymSecKey(15000, 1);
         Valve_OFF(6);
         Nop();
         Nop();
@@ -1026,26 +1100,21 @@ void feedWaterCage() {
     }
 }
 
-void osci() {
-    unsigned int ramps[] = {2000, 2000, 1000, 500, 250, 0};
-    ramp = ramps[getFuncNumber(1, "RP 2 1 .5 .25 0")];
+void osci(int L) {
+    ramp = 500;
+    splash("Ramping", "");
+    lcdWriteChar(L ? 'L' : 'R', 9, 1);
 
-    splash("Ramping", "  /20           ");
-    lcdWriteNumber(pwmDutyCycleLo, 3, 8, 2);
-    lcdWriteNumber(pwmDutyCycleHi, 3, 13, 2);
-    protectedSerialSend(SpValve8, pwmDutyCycleLo);
-    protectedSerialSend(SpValve8, pwmDutyCycleHi);
+    for (;;) {
+        unsigned char Hi = L ? pwmDutyCycleHiL : pwmDutyCycleHiR;
+        unsigned char Lo = L ? pwmDutyCycleLoL : pwmDutyCycleLoR;
+        lcdWriteNumber(Lo, 3, 8, 2);
+        lcdWriteNumber(Hi, 3, 13, 2);
 
-    int trial;
-    for (trial = 0; trial < 20; trial++) {
-
-        lcdWriteNumber(ramp, 4, 10, 1);
-        lcdWriteNumber(trial + 1, 2, 1, 2);
-        wait_ms(4000);
+        delaymSecKey(2500, L ? 2 : 3);
         turnOnLaser(3);
-        wait_ms(2000);
+        delaymSecKey(3500, L ? 2 : 3);
         turnOffLaser();
-        wait_ms(2000);
     }
 }
 
@@ -1192,13 +1261,13 @@ void variableVoltage() {
     laserTimerOn = 1;
     char VString[] = {'1', '2', '7', ' ', ' ', ' ', '-', '-', ' ', '-', ' ', '+', ' ', '+', '+', ' '};
     int tmpFreq;
-    tmpFreq = pwmDutyCycleLo;
+    tmpFreq = pwmDutyCycleLoR;
 
     while (1) {
-        tmpFreq = (tmpFreq > 254) ? 254 : tmpFreq;
+        tmpFreq = (tmpFreq > fullduty) ? fullduty : tmpFreq;
         tmpFreq = (tmpFreq < 0) ? 0 : tmpFreq;
-        pwmDutyCycleLo = tmpFreq;
-        protectedSerialSend(SpValve8, pwmDutyCycleLo);
+        pwmDutyCycleLoR = tmpFreq;
+        protectedSerialSend(SpValve8, pwmDutyCycleLoR);
         VString[0] = tmpFreq / 100 + 0x30;
         VString[1] = ((tmpFreq % 100) / 10) + 0x30;
         VString[2] = (tmpFreq % 10) + 0x30;
@@ -1219,7 +1288,7 @@ void variableVoltage() {
             case 5:
                 ;
                 int m = getFuncNumber(1, "Low Hi");
-                write_eeprom(m == 1 ? _EEP_FREQ_LOW_OFFSET : _EEP_FREQ_HIGH_OFFSET, tmpFreq);
+                write_eeprom(m == 1 ? _EEP_DUTY_LOW_L_OFFSET : _EEP_DUTY_HIGH_L_OFFSET, tmpFreq);
         }
 
     }
@@ -1305,15 +1374,15 @@ void testValve(void) {
     }
 }
 
-void testVolume(void) {
+void testVolume(int waterLength) {
     int n = getFuncNumber(1, "Valve #");
     int i;
     for (i = 0; i < 100; i++) {
 
         Valve_ON(n, fullduty);
-        wait_ms(50);
+        wait_ms(waterLength);
         Valve_OFF(n);
-        wait_ms(450);
+        wait_ms(500 - waterLength);
     }
 }
 
@@ -1345,7 +1414,7 @@ void stepLaser() {
     int step;
     int sCounter = 0;
     PORTCbits.RC1 = 1;
-    pwmDutyCycleLo = 0xfe;
+    pwmDutyCycleLoR = 0xfe;
     for (; sCounter < 20; sCounter++) {
         int powerx10 = getFuncNumber(2, "Power x10");
         splash("     Power", "Trial");
@@ -1375,27 +1444,25 @@ void stepLaser() {
 
 void callFunction(int n) {
     currentMiss = 0;
-    pwmDutyCycleLo = read_eeprom(_EEP_FREQ_LOW_OFFSET);
-    pwmDutyCycleHi = read_eeprom(_EEP_FREQ_HIGH_OFFSET);
-    if (pwmDutyCycleHi < 0 || pwmDutyCycleHi > 254) {
-        pwmDutyCycleHi = 127;
+    pwmDutyCycleLoR = read_eeprom(_EEP_DUTY_LOW_L_OFFSET);
+    pwmDutyCycleHiR = read_eeprom(_EEP_DUTY_HIGH_L_OFFSET);
+    if (pwmDutyCycleHiR < 0 || pwmDutyCycleHiR > fullduty) {
+        pwmDutyCycleHiR = fullduty;
     }
 
-    if (pwmDutyCycleLo < 0 || pwmDutyCycleLo > 254) {
-        pwmDutyCycleLo = 127;
+    if (pwmDutyCycleLoR < 0 || pwmDutyCycleLoR > fullduty) {
+        pwmDutyCycleLoR = fullduty >> 1;
     }
+
+
     PORTCbits.RC1 = 1;
     initZXTMR();
     switch (n) {
             int m;
             //ZX's functions
-        case 4300:
-        case 4318:
-            splash("No Trial Wait", "");
-            wait_Trial = 0;
-            break;
+
         case 4311:
-            testVolume();
+            testVolume(50);
             break;
 
         case 4312:
@@ -1414,7 +1481,7 @@ void callFunction(int n) {
 
         case 4314:
             splash("Vary Length", "Delay Laser");
-            laserTrialType = laserVaryLength;
+            laserTrialType = _LASER_VARY_LENGTH;
             ramp = 500;
             zxLaserSessions(setType(), laserDuringDelay, 5, 10, 20, 0.05, 15, 25, 1.0);
             ramp = 0;
@@ -1422,7 +1489,7 @@ void callFunction(int n) {
 
         case 4315:
             splash("Each Quarter", "Delay Laser");
-            laserTrialType = laserEachQuarter;
+            laserTrialType = _LASER_EACH_QUARTER;
             ramp = 500;
             zxLaserSessions(setType(), laserDuringDelay, 8, 16, 20, 0.05, 15, 25, 1.0);
             ramp = 0;
@@ -1434,6 +1501,20 @@ void callFunction(int n) {
         case 4317:
             correctTime();
             break;
+
+        case 4318:
+            splash("No Trial Wait", "");
+            wait_Trial = 0;
+            break;
+
+        case 4319:
+            taskType = _DNMS_TASK;
+            ramp = 500;
+            splash("LR LASER DNMS", "Sufficiency");
+            laserTrialType = _LASER_LR_EVERYTRIAL;
+            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.05, 20, 20, 1.0);
+            break;
+
         case 4321:
             //            setLaser();
             taskType = _DNMS_TASK;
@@ -1566,7 +1647,7 @@ void callFunction(int n) {
         }
 
         case 4354:
-            osci();
+            osci(2);
             break;
 
         case 4355:
@@ -1621,9 +1702,32 @@ void callFunction(int n) {
         }
 
 
+        case 4416:
+        {
+            splash("Varying Delay", "DC laser,");
+            int delay = setDelay(1);
+            taskType = _DNMS_TASK;
+            laserTrialType = setLaser();
+            zxLaserSessions(3, laserDuringDelayChR2, delay, delay * 2, 20, 0.036, 50, setSessionNum(), 1.0);
+            break;
+        }
 
+        case 4417:
+            splash("DNMS Shaping", "");
+            laserTrialType = _LASER_NO_TRIAL;
+            taskType = _SHAPPING_TASK;
+            zxLaserSessions(setType(), laserDuringDelay, 4, 8, 20, 0.036, 50, setSessionNum(), 1.0);
+            break;
 
-
+        case 4418:
+            splash("Feed Water", "");
+            feedWaterFast(36);
+            break;
+            
+        case 4419:
+            splash("Test Volume","");
+            testVolume(36);
+            break;
 
         case 4421:
             splash("DNMS Shaping", "");
