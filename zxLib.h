@@ -111,8 +111,8 @@ extern "C" {
 #define _SHAPPING_TASK 10
 #define _DNMS_LEARNING_TASK 19
 #define _DNMS_TASK 20
-#define _ASSOCIATE_SHAPPING_TASK 24
-#define _ASSOCIATE_TASK 25
+//#define _ASSOCIATE_SHAPPING_TASK 24
+//#define _ASSOCIATE_TASK 25
 #define _GONOGO_TASK 30
 #define _DNMS_LR_TEACH 38
 #define _DNMS_LR_LEARNING_TASK 39
@@ -127,8 +127,6 @@ extern "C" {
 
 //extern float odorLength;
 extern char* zxVer;
-//extern unsigned int licking, lickFlag;
-//extern unsigned int ramp, ramping,laserTimerOn,pwmDutyCycleHi,pwmDutyCycleLo;
 
 extern unsigned int laserTimer;
 extern unsigned int laserOnTime ;
@@ -136,8 +134,8 @@ extern unsigned int laserOffTime ;
 
 extern unsigned int ramp;
 extern unsigned int ramping;
-extern unsigned char pwmDutyCycleHiR;
-extern unsigned char pwmDutyCycleLoR;
+extern unsigned char pwmDutyHiR;
+extern unsigned char pwmDutyLoR;
 extern unsigned int laserTimerOn;
 extern unsigned int licking;
 extern const char odorTypes[];

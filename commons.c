@@ -269,7 +269,7 @@ void SetupPorts(void) {
     PORTA = 0;
     TRISA = 0xF9FF;
     PORTB = 0;
-    TRISB = 0xFF0F;
+    TRISB = 0x000F;
     PORTC = 0;
     TRISC = 0xFFF5;
     PORTD = 0;
@@ -350,7 +350,15 @@ void Init_PWM(void) {
     config3 = (PWM_SEVOPS1 & PWM_OSYNC_PWM & PWM_UEN);
     OpenMCPWM(period, sptime, config1, config2, config3);
 
+    PORTFbits.RF0 = 1;
+    Nop();
+    Nop();
     PORTCbits.RC1 = 1;
+    Nop();
+    Nop();
+    PDC2 = fullduty;
+    Nop();
+    Nop();
     PDC4 = fullduty;
 }
 
