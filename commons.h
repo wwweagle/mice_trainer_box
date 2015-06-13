@@ -24,12 +24,12 @@ extern "C" {
 #include <pwm.h>
 #include <ports.h>
 #include <timer.h>
-#include <spi.h>
+//#include <spi.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <xlcd.h>
-#include <time.h>
-#include <string.h>
+//#include <stdio.h>
+//#include <xlcd.h>
+//#include <time.h>
+//#include <string.h>
 
 
 #define PCBGen "3Gen"
@@ -239,6 +239,8 @@ extern unsigned char hardwareKey;
 extern unsigned char hardwareKeyPressed;
 extern int u2Received;
 
+extern unsigned int hit, miss, falseAlarm, correctRejection, correctRatio;
+extern int currentMiss;
 
 unsigned int getFuncNumber(int targetDigits, char* input);
 

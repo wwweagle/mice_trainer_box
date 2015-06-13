@@ -18,6 +18,20 @@ extern "C" {
 
 //#define zxLibVer "z611"
 
+typedef unsigned long _prog_addressT;
+#define _EE_WORD         2
+#define _memcpy_p2d16(dest, src, len)  _memcpy_helper(src, dest, len, 0) 
+#define _wait_eedata() { while (NVMCONbits.WR); }
+#define _erase_eedata  _eedata_helper1
+#define _write_eedata_word  _eedata_helper3
+extern void _eedata_helper1(_prog_addressT dst, int len);
+extern void _eedata_helper3(_prog_addressT dst, int dat);
+extern _prog_addressT _memcpy_helper(_prog_addressT src, void *dst,
+                                     unsigned int len, int flags);
+
+
+typedef unsigned int _delayT;
+
 #define laserDuring3Baseline 3
 #define laserDuring4Baseline 4
 #define laserDuringBaseline 5
@@ -26,8 +40,9 @@ extern "C" {
 #define laserDuringDelay 10
 #define laserDuringDelayChR2 11
 #define laserDelayDistractor 12
-#define laserLDuringDelay 15
-#define laserRDuringDelay 16
+#define laserRampDuringDelay 14
+//#define laserLDuringDelay 15
+//#define laserRDuringDelay 16
 #define laserDuringOdor 20
 #define laserDuring1stOdor 21
 #define laserDuring2ndOdor 22
@@ -38,15 +53,21 @@ extern "C" {
 #define laserNoDelayControlShort 69
 #define laserNoDelayControl 70
 #define laserDuringEarlyHalf 80
-#define laserDuring1Terice 81
-#define laserDuring2Terice 82
-#define laserDuring3Terice 83
+//#define laserDuring1Terice 81
+//#define laserDuring2Terice 82
+//#define laserDuring3Terice 83
 #define laserDuringLateHalf 90
 #define laserDuring1Quarter 91
 #define laserDuring2Quarter 92
 #define laserDuring3Quarter 93
 #define laserDuring4Quarter 94
 #define laserDuringResponseDelay 95
+
+#define laserDuring12s1Quarter 96
+#define laserDuring12s2Quarter 97
+#define laserDuring12s3Quarter 98
+#define laserDuring12s4Quarter 99
+
 #define trialTypeDnmsSwitch 100
 #define trialTypeGoNogoSwitch 110
 #define laser4sRamp 121
@@ -64,17 +85,20 @@ extern "C" {
 #define atFirstOdorBeginning 20
 #define atFirstOdorEnd 30
 #define atDelayBegin 40
-#define atDelay_5SecIn 45
+#define atDelay_5SecIn 42
 #define atDelay1SecIn 50
 #define atDelay1_5SecIn 51
 #define atDelay2SecIn 52
-#define atDelay_5ToMiddle 54
-#define atDelayMiddle 55
-#define atDelayMiddleEnd 56
-#define atDelayLast2_5SecBegin 57
-#define atDelayLast2SecBegin 58
-#define atDelayLast1_5SecBegin 59
-#define atDelayLastSecBegin 60
+#define atDelay2_5SecIn 53
+#define atDelay3SecIn 54
+#define atDelay_5ToMiddle 55
+#define atDelayMiddle 56
+#define atDelay8_5SecIn 57
+#define atDelay9SecIn 58
+#define atDelayLast2_5SecBegin 59
+#define atDelayLast2SecBegin 60
+#define atDelayLast1_5SecBegin 61
+#define atDelayLastSecBegin 63
 #define atDelayLast500mSBegin 65
 #define atDelayLast200mSBegin 68
 #define atSecondOdorBeginning 70
@@ -97,7 +121,10 @@ extern "C" {
 //#define laserFollowOdorB 5
 //#define laser1and2Half 6
 //#define laser3and4Quarter 10
-#define _LASER_EACH_QUARTER 20
+#define _LASER_LR_EACH_QUARTER 20
+#define _LASER_EACH_QUARTER 21
+#define _LASER_12s_LR_EACH_QUARTER 25
+#define _LASER_12s_EACH_QUARTER 26
 #define _LASER_VARY_LENGTH 30
 #define _LASER_LR_EVERYTRIAL 40
 //#define laserCycleDelayLaser 30
@@ -158,7 +185,7 @@ void lcdWriteString(char* s);
 void odorDepeltion(int totalTrial);
 
 //void zxDNMSSwiFtchTrial(int DNMS, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int IntervalIn, float delay_before_reward);
-void zxLaserTrial(int type, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
+void zxLaserTrial(int type, int FirstOdorIn, float odorLength, _delayT OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
 void callFunction(int n);
 
 
@@ -166,7 +193,7 @@ void wait_ms(int time);
 //void setLaser(void);
 
 void feedWater();
-void splash(char * s1, char * s2);
+void splash(char s1[], char s2[]);
 
 void initZXTMR(void);
 void protectedSerialSend(int type, int value);

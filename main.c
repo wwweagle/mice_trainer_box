@@ -1,11 +1,6 @@
 
 #include "commons.h"
-#include "tasks.h"
 #include "zxLib.h"
-//#include "ldLib.h"
-//#include "cq.h"
-//#include "ShallWay.h"
-//#include "gcf.h"
 
 void FuncID(int n);
 _FOSC(CSW_FSCM_OFF & XT_PLL4);

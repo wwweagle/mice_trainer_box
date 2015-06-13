@@ -1,5 +1,4 @@
 #include "commons.h"
-#include "tasks.h"
 #include "zxlib.h"
 
 unsigned int period;
@@ -12,6 +11,10 @@ int u2Received = -1;
 unsigned char hardwareKey;
 unsigned char hardwareKeyPressed;
 unsigned char LCD_num[] = {0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x2A, 0X23};
+
+
+unsigned int hit = 0, miss = 0, falseAlarm = 0, correctRejection = 0, correctRatio = 0;
+int currentMiss = 0;
 
 void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     IFS0bits.T2IF = 0;
