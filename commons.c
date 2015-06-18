@@ -27,6 +27,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T3Interrupt(void) {
     key_port |= 0x70;
     row4 = 0;
     if (col2 == 0) {
+        localSendOnce(SpTrain, 127);
         asm("RESET");
     }
 }
@@ -36,6 +37,7 @@ void __attribute__((interrupt, no_auto_psv)) _U2RXInterrupt(void) {
         U2STAbits.OERR = 0;
     }
     if (0x2a == (u2Received = U2RXREG)) {
+        localSendOnce(SpTrain, 127);
         asm("RESET");
     }
     IFS1bits.U2RXIF = 0;

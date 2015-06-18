@@ -715,6 +715,7 @@ void waitTrial() {
     if (!wait_Trial) {
         return;
     }
+    u2Received = -1;
     while (u2Received != 0x31) {
         protectedSerialSend(20, 1);
     }
@@ -909,13 +910,27 @@ void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI, int tr
                         laserSide = (firstOdor == 2 || firstOdor == 5 || firstOdor == 7) ? 1 : 2;
                         laserCurrentTrial = 1;
                         break;
+
+
+
+
+                    case _LASER_INCONGRUENT_CATCH_TRIAL:
+                        if ((currentTrial > 3 && currentTrial < 8 && firstOdor == odor_A && secondOdor == odor_A)
+                                || (currentTrial > 7 && currentTrial < 12 && firstOdor == odor_A && secondOdor == odor_B)
+                                || (currentTrial > 11 && currentTrial < 16 && firstOdor == odor_B && secondOdor == odor_A)
+                                || (currentTrial > 15 && currentTrial < 20 && firstOdor == odor_B && secondOdor == odor_B)) {
+                            laserSide = (firstOdor == 2 || firstOdor == 5 || firstOdor == 7) ? 2 : 1;
+                        } else {
+                            laserSide = (firstOdor == 2 || firstOdor == 5 || firstOdor == 7) ? 1 : 2;
+                        }
+                        laserCurrentTrial = 1;
+                        break;
                 }
                 zxLaserTrial(laserType, firstOdor, odorLength, delay, secondOdor, WaterLen, ITI, delay_before_reward, laserCurrentTrial);
                 currentTrial++;
             }
         }
         protectedSerialSend(SpSess, 0);
-        u2Received = -1;
 
     }
     protectedSerialSend(SpTrain, 0); // send it's the end
@@ -1681,6 +1696,17 @@ void callFunction(int n) {
             splash("BaseLine", "Control");
             zxLaserSessions(setType(), laserDuringBaseline, 4, 8, 20, 0.05, 50, 30, 1.0);
             break;
+
+        case 4326:
+            taskType = _DNMS_TASK;
+            ramp = 500;
+            splash("LR LASER DNMS", "Sufficiency");
+            laserTrialType = _LASER_INCONGRUENT_CATCH_TRIAL;
+            zxLaserSessions(3, laserRampDuringDelay, 12, 24, 20, 0.05, 20, 15, 1.0);
+            break;
+
+
+
         case 4331:
             splash("BaseLine+Delay", "Control");
             zxLaserSessions(setType(), laserDuringBaselineNDelay, 4, 8, 20, 0.05, 50, 30, 1.0);

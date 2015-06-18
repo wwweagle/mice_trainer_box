@@ -127,6 +127,7 @@ typedef unsigned int _delayT;
 #define _LASER_12s_EACH_QUARTER 26
 #define _LASER_VARY_LENGTH 30
 #define _LASER_LR_EVERYTRIAL 40
+#define _LASER_INCONGRUENT_CATCH_TRIAL 45
 //#define laserCycleDelayLaser 30
 
 #define _LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
@@ -147,6 +148,7 @@ typedef unsigned int _delayT;
 #define _GONOGO_LR_TEACH 49
 #define _GONOGO_LR_TASK 50
 #define _NO_ODOR_CATCH_TRIAL_TASK 60
+
 
 #define _EEP_DUTY_LOW_L_OFFSET 0
 #define _EEP_DUTY_HIGH_L_OFFSET 2
