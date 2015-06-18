@@ -1,12 +1,11 @@
 #include "commons.h"
-#include "tasks.h"
 #include "zxLib.h"
 
 //DEBUG
 
 const char _DEBUGGING = 0;
 
-char* zxVer = "z5612b";
+char* zxVer = "z5612c";
 float odorLength = 1.0;
 
 unsigned int laserTimer = 0u;
@@ -323,27 +322,27 @@ void assertLaser(int type, int step, int currentTrial) {
                     turnOffLaser();
                 }
                 break;
-//            case laserDuring1Terice:
-//                if (step == atDelayBegin) {
-//                    turnOnLaser(3);
-//                } else if (step == atDelay2SecIn) {
-//                    turnOffLaser();
-//                }
-//                break;
-//            case laserDuring2Terice:
-//                if (step == atDelay2SecIn) {
-//                    turnOnLaser(3);
-//                } else if (step == atDelayLast2SecBegin) {
-//                    turnOffLaser();
-//                }
-//                break;
-//            case laserDuring3Terice:
-//                if (step == atDelayLast2SecBegin) {
-//                    turnOnLaser(3);
-//                } else if (step == atSecondOdorBeginning) {
-//                    turnOffLaser();
-//                }
-//                break;
+                //            case laserDuring1Terice:
+                //                if (step == atDelayBegin) {
+                //                    turnOnLaser(3);
+                //                } else if (step == atDelay2SecIn) {
+                //                    turnOffLaser();
+                //                }
+                //                break;
+                //            case laserDuring2Terice:
+                //                if (step == atDelay2SecIn) {
+                //                    turnOnLaser(3);
+                //                } else if (step == atDelayLast2SecBegin) {
+                //                    turnOffLaser();
+                //                }
+                //                break;
+                //            case laserDuring3Terice:
+                //                if (step == atDelayLast2SecBegin) {
+                //                    turnOnLaser(3);
+                //                } else if (step == atSecondOdorBeginning) {
+                //                    turnOffLaser();
+                //                }
+                //                break;
             case laserDuring1Quarter:
                 if (step == atDelayBegin) {
                     turnOnLaser(laserSide);
@@ -727,6 +726,7 @@ void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI, int tr
     int currentTrial = 0;
     int currentSession = 0;
 
+    protectedSerialSend(SpWater_bitter, pwmDutyLoL);
     protectedSerialSend(SpValve8, pwmDutyLoR);
     protectedSerialSend(SpStepN, taskType);
 
@@ -791,6 +791,17 @@ void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI, int tr
                         }
 
                         lastHit = hit;
+                        break;
+                    case _NO_ODOR_CATCH_TRIAL_TASK:
+                        firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
+                        secondOdor = (index == 1 || index == 2) ? odor_A : odor_B;
+
+                        if ((currentTrial > 3 && currentTrial < 8 && firstOdor == odor_A && secondOdor == odor_A)
+                                || (currentTrial > 7 && currentTrial < 12 && firstOdor == odor_A && secondOdor == odor_B)
+                                || (currentTrial > 11 && currentTrial < 16 && firstOdor == odor_B && secondOdor == odor_A)
+                                || (currentTrial > 15 && currentTrial < 20 && firstOdor == odor_B && secondOdor == odor_B)) {
+                            firstOdor = odor_A - odorType;
+                        }
                         break;
 
                 }
@@ -1190,8 +1201,8 @@ void feedWaterCage() {
 }
 
 void osci(int L) {
-    int laser[] = {3500, 3500, 6500, 10500, 1500, 3500};
-    int delay = laser[getFuncNumber(1, "5 8 12 1.5s ")];
+    int laser[] = {3500, 3500, 6500, 10500, 1500, 2500};
+    int delay = laser[getFuncNumber(1, "5 8 12 1.5 2.5s")];
 
     ramp = 500;
     splash("Ramping", "");
@@ -1593,12 +1604,21 @@ void callFunction(int n) {
             break;
 
         case 4317:
-            splash("Each Quarter", "Delay LR Laser");
-            laserTrialType = _LASER_LR_EACH_QUARTER;
+            taskType = _NO_ODOR_CATCH_TRIAL_TASK;
             ramp = 500;
-            zxLaserSessions(3, laserDuringDelay, 8, 16, 20, 0.05, 15, 25, 1.0);
-            ramp = 0;
+            splash("LR LASER DNMS", "Sufficiency");
+
+            laserTrialType = _LASER_LR_EVERYTRIAL;
+            zxLaserSessions(3, laserRampDuringDelay, 12, 24, 20, 0.05, 20, 15, 1.0);
             break;
+
+            //        case 4317:
+            //            splash("Each Quarter", "Delay LR Laser");
+            //            laserTrialType = _LASER_LR_EACH_QUARTER;
+            //            ramp = 500;
+            //            zxLaserSessions(3, laserDuringDelay, 8, 16, 20, 0.05, 15, 25, 1.0);
+            //            ramp = 0;
+            //            break;
 
             //        case 4317:
             //            correctTime();
@@ -1617,12 +1637,12 @@ void callFunction(int n) {
             laserTrialType = _LASER_LR_EVERYTRIAL;
             zxLaserSessions(3, laserRampDuringDelay, delay, delay * 2, 20, 0.05, 20, setSessionNum(), 1.0);
             break;
-            
+
         case 4320:
             splash("12s Each Quarter", "Delay LR Laser");
             laserTrialType = _LASER_12s_LR_EACH_QUARTER;
             ramp = 500;
-            zxLaserSessions(3, laserDuringDelay, 12, 24, 20, 0.05, 15, 25, 1.0);
+            zxLaserSessions(3, laserDuringDelay, 12, 24, 20, 0.05, 25, 15, 1.0);
             ramp = 0;
             break;
         case 4321:

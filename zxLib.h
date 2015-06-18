@@ -146,6 +146,7 @@ typedef unsigned int _delayT;
 #define _DNMS_LR_TASK 40
 #define _GONOGO_LR_TEACH 49
 #define _GONOGO_LR_TASK 50
+#define _NO_ODOR_CATCH_TRIAL_TASK 60
 
 #define _EEP_DUTY_LOW_L_OFFSET 0
 #define _EEP_DUTY_HIGH_L_OFFSET 2
