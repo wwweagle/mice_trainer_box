@@ -155,6 +155,8 @@ typedef unsigned int _delayT;
 #define _EEP_DUTY_LOW_R_OFFSET 4
 #define _EEP_DUTY_HIGH_R_OFFSET 6
 
+#define _ODOR_A_LIKE ()
+
 //extern float odorLength;
 extern char* zxVer;
 
