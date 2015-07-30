@@ -35,6 +35,7 @@ typedef unsigned int _delayT;
 #define laserDuring3Baseline 3
 #define laserDuring4Baseline 4
 #define laserDuringBaseline 5
+#define laserDuringDelay_Odor2 6
 #define laserDuringBaseAndResponse 7
 #define laserDuringBaselineNDelay 9
 #define laserDuringDelay 10

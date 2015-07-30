@@ -8,20 +8,22 @@ _FWDT(WDT_OFF);
 _FBORPOR(PBOR_ON & 0xFFFF & PWRT_64 & MCLR_EN); //0xFFFF=BORV20=BORV_20
 
 int main(void) {
-    ADPCFG = 0xFFFF;
+    
     SetupPorts();
     Init_PWM();
     InitTMR();
     Init_LCD();
     InitUART2();
+//    unsigned char StartText[] = {0x00, 0x01, 0x02, 0x03};
+//    Puts_UART2((unsigned char*) &StartText[0], sizeof (StartText));
+    
 
 
-    unsigned char StartText[] = {0x00, 0x01, 0x02, 0x03};
     //    Flags.pun = 0;
 
     //splash("Guys, WRITE YOUR", "HEADER FILE !!!");
     splash("Mice Trainer", zxVer);
-    Puts_UART2((unsigned char*) &StartText[0], sizeof (StartText));
+
 
     while (1) {
         unsigned int n = getFuncNumber(4, "Main Function ?");
@@ -63,9 +65,9 @@ int main(void) {
                 //                callLDFunction(n);
                 //                break;
                 /////////////CQ functions//////////////////*/
-//            case 2111 ... 2222:
-//                CQFunction(n);
-//                break;
+                //            case 2111 ... 2222:
+                //                CQFunction(n);
+                //                break;
                 ////////////////LD functions/////////////
                 //           case 3354:
                 //               pico(1000, 1000);

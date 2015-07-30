@@ -16,6 +16,14 @@ unsigned char LCD_num[] = {0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38,
 unsigned int hit = 0, miss = 0, falseAlarm = 0, correctRejection = 0, correctRatio = 0;
 int currentMiss = 0;
 
+void safe_wait_ms(int duration) {
+    int i;
+    while (duration-- > 0) {
+        for (i = 0; i < 1000; i++);
+    }
+}
+
+
 void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     IFS0bits.T2IF = 0;
     timerCounterI++;
@@ -27,7 +35,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T3Interrupt(void) {
     key_port |= 0x70;
     row4 = 0;
     if (col2 == 0) {
-        localSendOnce(SpTrain, 127);
+//        localSendOnce(SpTrain, 127);
         asm("RESET");
     }
 }
@@ -37,7 +45,9 @@ void __attribute__((interrupt, no_auto_psv)) _U2RXInterrupt(void) {
         U2STAbits.OERR = 0;
     }
     if (0x2a == (u2Received = U2RXREG)) {
-        localSendOnce(SpTrain, 127);
+//        localSendOnce(SpTrain, 127);
+        protectedSerialSend(SpSess, 0);
+        safe_wait_ms(50);
         asm("RESET");
     }
     IFS1bits.U2RXIF = 0;
@@ -74,12 +84,7 @@ void InitTMR3(void) {
     ConfigIntTimer3(T3_INT_PRIOR_4 & T3_INT_ON);
 }
 
-void safe_wait_ms(int duration) {
-    int i;
-    while (duration-- > 0) {
-        for (i = 0; i < 1000; i++);
-    }
-}
+
 
 void Init_LCD(void) {
     safe_wait_ms(15);
@@ -271,6 +276,8 @@ void Key_Event(void) {
 }
 
 void SetupPorts(void) {
+    ADPCFG = 0xFFFF;
+    
     PORTA = 0;
     TRISA = 0xF9FF;
     PORTB = 0;
@@ -307,6 +314,12 @@ void InitUART2(void) {
 
     baudvalue = ((FCY / 16) / BAUDRATE) - 1;
     OpenUART2(U2MODEvalue, U2STAvalue, baudvalue);
+    
+    int i;
+    for (i = 0; i < 4; i++) {
+        while (BusyUART2());
+        U2TXREG = i;
+    }
 }
 
 void UART2PutChar(unsigned char Ch) {
