@@ -136,9 +136,9 @@ extern "C" {
 
 //press key, s1s1 through s5s5
 #define SpS1S1 	 20 //Trial Wait [ZX]
-#define SpS1S2   21
-#define SpS1S3   22
-#define SpS1S4	 23
+#define SpS1S2   21 //PermMessage
+#define SpS1S3   22 //LickLFreq
+#define SpS1S4	 23 
 #define SpS1S5   24
 #define SpS2S1 	 25
 #define SpS2S2   26

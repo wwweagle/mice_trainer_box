@@ -6,7 +6,7 @@
 
 const char _DEBUGGING = 0;
 
-char* zxVer = "z5619e";
+char* zxVer = "z5806";
 float odorLength = 1.0;
 
 unsigned int laserTimer = 0u;
@@ -578,6 +578,7 @@ int read_eeprom(int offset) {
 }
 
 void processHit(float waterPeroid, int valve, int id) {
+    protectedSerialSend(22, valve == 1 ? 1 : 2);
     Valve_ON(valve, fullduty);
     wait_ms(waterPeroid * 1000);
     Valve_OFF(valve);
@@ -599,10 +600,14 @@ void processMiss(int id) {
 }
 
 void processLRTeaching(float waterPeroid, int LR) {
-    if ((rand() % 3) == 0) {
-        Valve_ON(LR == 2 ? 1 : 4, fullduty);
+    int rr = rand() % 3;
+    if (rr == 0) {
+        lcdWriteChar(rr + 0x30, 4, 1);
+        protectedSerialSend(22, LR == 2 ? 1 : 2);
+        //        FreqL = lickLCount;
+        Valve_ON(LR == 2 ? 1 : 3, fullduty);
         wait_ms(waterPeroid * 1000);
-        Valve_OFF(LR == 2 ? 1 : 4);
+        Valve_OFF(LR == 2 ? 1 : 3);
         //        currentMiss = 0;
         protectedSerialSend(SpWater_sweet, LR);
     }
@@ -622,7 +627,7 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
             //        case _ASSOCIATE_SHAPPING_TASK:
 
             ///////////Detect/////////////////
-            for (timerCounterI = 0; timerCounterI < 450 && !lickFlag; lickFlag = licking);
+            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag; lickFlag = licking);
 
             /////Reward
             if (!lickFlag) {
@@ -632,6 +637,7 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                 } else {
                     processMiss(1);
                     if ((taskType == _SHAPPING_TASK /*|| taskType == _ASSOCIATE_SHAPPING_TASK*/) && ((rand() % 3) == 0)) {
+                        protectedSerialSend(22, 1);
                         Valve_ON(water_sweet, fullduty);
                         protectedSerialSend(SpWater_sweet, 1);
                         wait_ms(waterPeroid * 1000);
@@ -651,12 +657,12 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
         case _DNMS_LR_TASK:
             //
             ///////////Detect/////////////////
-            for (timerCounterI = 0; timerCounterI < 450 && !lickFlag; lickFlag = licking);
+            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag; lickFlag = licking);
             /////Reward
             if (!lickFlag) {
                 processMiss((firstOdor != secondOdor) ? 2 : 3);
             } else if (!(lickFlag & 1) != !(firstOdor^secondOdor)) {
-                processHit(waterPeroid, lickFlag & 1 ? 4 : 1, lickFlag);
+                processHit(waterPeroid, lickFlag & 1 ? 3 : 1, lickFlag);
             } else {
                 processFalse(lickFlag == _LICKING_LEFT ? 2 : 3);
             }
@@ -665,13 +671,13 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
         case _DNMS_LR_TEACH:
             //
             ///////////Detect/////////////////
-            for (timerCounterI = 0; timerCounterI < 450 && !lickFlag; lickFlag = licking);
+            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag; lickFlag = licking);
             /////Reward
             if (!lickFlag) {
                 processMiss((firstOdor != secondOdor) ? 2 : 3);
                 processLRTeaching(waterPeroid, (firstOdor != secondOdor) ? 2 : 3);
             } else if (!(lickFlag & 1) != !(firstOdor^secondOdor)) {
-                processHit(waterPeroid, lickFlag & 1 ? 4 : 1, lickFlag);
+                processHit(waterPeroid, lickFlag & 1 ? 3 : 1, lickFlag);
             } else {
                 processFalse(lickFlag == _LICKING_LEFT ? 2 : 3);
                 processLRTeaching(waterPeroid, (firstOdor != secondOdor) ? 2 : 3);
@@ -682,13 +688,13 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
         case _GONOGO_LR_TEACH:
             //
             ///////////Detect/////////////////
-            for (timerCounterI = 0; timerCounterI < 450 && !lickFlag; lickFlag = licking);
+            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag; lickFlag = licking);
 
             /////Reward
             if (lickFlag == _LICKING_LEFT && likeOdorA(firstOdor)) {
                 processHit(waterPeroid, 1, 2);
             } else if (lickFlag == _LICKING_RIGHT && !likeOdorA(firstOdor)) {
-                processHit(waterPeroid, 4, 3);
+                processHit(waterPeroid, 3, 3);
             } else if (lickFlag) {
                 processFalse(lickFlag == _LICKING_LEFT ? 2 : 3);
             } else {
@@ -698,7 +704,7 @@ void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
 
         case _GONOGO_TASK:
 
-            for (timerCounterI = 0; timerCounterI < 450 && !lickFlag; lickFlag = licking);
+            for (timerCounterI = 0; timerCounterI < 500 && !lickFlag; lickFlag = licking);
 
             /////Reward
             if (!lickFlag) {
@@ -1084,7 +1090,7 @@ void zxLaserTrial(int type, int firstOdor, float odorLength, _delayT interOdorDe
     //Assess Performance here
     waterNResult(firstOdor, secondOdor, waterPeroid);
 
-    waitJ(500); //water time sync
+    waitJ(550); //water time sync
 
     // Total Trials
     int totalTrials = hit + correctRejection + miss + falseAlarm;
@@ -1213,24 +1219,6 @@ void odorDepeltion(int totalTrial) {
     }
 }
 
-void feedWaterCage() {
-    splash("Enter Times", "");
-    int counter = 0;
-    int wasLicking = 0;
-
-    while (1) {
-        if (licking && !wasLicking) {
-            wasLicking = 1;
-            Valve_ON(1, fullduty);
-            lcdWriteNumber(++counter, 4, 1, 2);
-        } else if (wasLicking && !licking) {
-
-            Valve_OFF(1);
-        }
-        wait_ms(50);
-    }
-}
-
 void rampTweak(int L, int itiIndex) {
     int laser[] = {3500, 3500, 6500, 10500, 1500, 2500};
     int delay = laser[getFuncNumber(1, "5 8 12 1.5 2.5s")];
@@ -1292,7 +1280,7 @@ void feedWaterLR(float waterLength) {
     unsigned int waterCount = 0;
     unsigned int lastL = 0;
     unsigned int lastR = 0;
-    splash("L       R", "Last Port");
+    splash("L       R", "W     FL   FR");
     PDC1 = fullduty;
     PDC2 = fullduty;
     timerCounterI = 2000;
@@ -1300,54 +1288,35 @@ void feedWaterLR(float waterLength) {
     while (1) {
         if (lickLCount > lastL) {
             if (timerCounterI > 2000 && lastLocation != _LICKING_LEFT) {
+                protectedSerialSend(22, 1);
                 PORTGbits.RG0 = 1;
                 lastLocation = _LICKING_LEFT;
                 timerCounterI = 0;
-                lcdWriteChar('L', 11, 2);
-                lcdWriteNumber(++waterCount, 4, 13, 2);
+                lcdWriteChar('L', 16, 1);
+                lcdWriteNumber(++waterCount, 4, 2, 2);
             }
             lcdWriteNumber(lickLCount, 4, 3, 1);
             lastL = lickLCount;
         } else if (lickRCount > lastR) {
             if (timerCounterI > 2000 && lastLocation != _LICKING_RIGHT) {
-                PORTFbits.RF0 = 1;
+                protectedSerialSend(22, 2);
+                PORTGbits.RG1 = 1;
                 lastLocation = _LICKING_RIGHT;
                 timerCounterI = 0;
-                lcdWriteChar('R', 11, 2);
-                lcdWriteNumber(++waterCount, 4, 13, 2);
+                lcdWriteChar('R', 16, 1);
+                lcdWriteNumber(++waterCount, 4, 2, 2);
             }
             lcdWriteNumber(lickRCount, 4, 11, 1);
             lastR = lickRCount;
         }
+
         if (timerCounterI > waterLength) {
             PORTGbits.RG0 = 0;
             Nop();
             Nop();
-            PORTFbits.RF0 = 0;
+            PORTGbits.RG1 = 0;
             Nop();
             Nop();
-        }
-    }
-}
-
-void feedWaterNew(void) {
-    int waterLength = 1000;
-    int wasLicking = 0;
-    int lickCounter = 0;
-    splash("Total Lick", "");
-    while (1) {
-        if (licking && !wasLicking) {
-            timerCounterI = 0;
-            Valve_ON(water_sweet, fullduty);
-            wasLicking = 1;
-            lickCounter++;
-            lcdWriteNumber(lickCounter, 4, 12, 1);
-        } else if (wasLicking && !licking) {
-            wasLicking = 0;
-        }
-        if (timerCounterI > waterLength) {
-
-            Valve_OFF(water_sweet);
         }
     }
 }
@@ -1605,7 +1574,7 @@ void callFunction(int n) {
     PORTCbits.RC1 = 1;
     initZXTMR();
     switch (n) {
-            int m;
+            //            int m;
             //ZX's functions
 
         case 4301:
@@ -1617,6 +1586,12 @@ void callFunction(int n) {
             zxLaserSessions(3, laserRampDuringDelay, 2, 5, 20, 0.05, 20, 15, 1.0);
             break;
 
+        case 4310:
+        {
+            int m = getFuncNumber(2, "Time in ms");
+            testVolume(m);
+            break;
+        }
         case 4311:
             testVolume(50);
             break;
@@ -1719,10 +1694,12 @@ void callFunction(int n) {
 
         case 4323:
         {
-            splash("DNMS LR TEACH", "No Laser");
+            splash("DNMS LR TEACH", "Ramp Laser ++");
+            protectedSerialSend(21, 101);
             taskType = _DNMS_LR_TEACH;
-            laserTrialType = _LASER_NO_TRIAL;
-            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.05, 10, 20, 1.0);
+            laserTrialType = _LASER_EVERY_TRIAL;
+            ramp = 500;
+            zxLaserSessions(3, laserRampDuringDelay, 5, 10, 20, 0.05, 10, 15, 1.0);
             break;
         }
 
@@ -1743,7 +1720,15 @@ void callFunction(int n) {
             zxLaserSessions(3, laserRampDuringDelay, 12, 24, 20, 0.05, 20, 15, 1.0);
             break;
 
-
+        case 4327:
+        {
+            splash("DNMS LR TEACH", "No Laser");
+            protectedSerialSend(21, 100);
+            taskType = _DNMS_LR_TEACH;
+            laserTrialType = _LASER_NO_TRIAL;
+            zxLaserSessions(3, laserRampDuringDelay, 5, 10, 20, 0.05, 20, 15, 1.0);
+            break;
+        }
 
         case 4331:
             splash("Delay+Odor2", "Control");
@@ -1754,7 +1739,7 @@ void callFunction(int n) {
         case 4332:
             splash("Odor", "Control");
             laserTrialType = _LASER_OTHER_TRIAL;
-            m = getFuncNumber(1, "1st 2nd BothOdor");
+            int m = getFuncNumber(1, "1st 2nd BothOdor");
             zxLaserSessions(setType(), m == 1 ? laserDuring1stOdor : m == 2 ? laserDuring2ndOdor : laserDuringOdor, 5, 10, 20, 0.05, 50, 30, 1.0);
             break;
         case 4333:
@@ -1985,7 +1970,7 @@ void callFunction(int n) {
         {
             taskType = _GONOGO_LR_TASK;
             splash("GoNogo LR", "");
-            m = getFuncNumber(1, "No Pre Odor Post");
+            int m = getFuncNumber(1, "No Pre Odor Post");
             int laserPeriod;
             laserPeriod = laserDuring4Baseline;
             switch (m) {
@@ -2056,9 +2041,6 @@ void callFunction(int n) {
             break;
         }
 
-        case 4444:
-            feedWaterNew();
-            break;
 
         case 4445:
             feedWaterLR(50);
