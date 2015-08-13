@@ -6,7 +6,7 @@
 
 const char _DEBUGGING = 0;
 
-char* zxVer = "z5806";
+char* zxVer = "z5812";
 float odorLength = 1.0;
 
 unsigned int laserTimer = 0u;
@@ -133,7 +133,8 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         Nop();
         Nop();
         Out6 = 1;
-    } else if (_LICK_LEFT && !licking && filtered()) {
+        licking=_LICKING_BOTH;
+    } else if (_LICK_LEFT && licking!=_LICKING_LEFT && filtered()) {
         timeFilter = timerCounterJ;
         licking = _LICKING_LEFT;
         Out1 = 1;
@@ -141,7 +142,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         Nop();
         localSendOnce(SpLick, taskType < 35 ? 1 : 2);
         //        tick(3);
-    } else if (_LICK_RIGHT && !licking && filtered()) {
+    } else if (_LICK_RIGHT && licking!=_LICKING_RIGHT && filtered()) {
         timeFilter = timerCounterJ;
         licking = _LICKING_RIGHT;
         Out6 = 1;
@@ -776,7 +777,6 @@ void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI, int tr
                 switch (taskType) {
 
                     case _DNMS_TASK:
-                    case _DNMS_LR_TASK:
                         firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
                         secondOdor = (index == 1 || index == 2) ? odor_A : odor_B;
                         break;
@@ -789,6 +789,7 @@ void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI, int tr
                         firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
                         secondOdor = -odorType;
                         break;
+                    case _DNMS_LR_TASK:
                     case _DNMS_LR_TEACH:
                         if (hit > lastHit || currentTrial == 0) {
                             firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
@@ -1182,7 +1183,7 @@ void delaymSecKey(unsigned int N, unsigned int type) {
     }
 }
 
-void odorDepeltion(int totalTrial) {
+void odorDepeltion(int totalTrial, int p3) {
     initZXTMR();
     PDC2 = fullduty;
     PDC4 = fullduty;
@@ -1208,9 +1209,11 @@ void odorDepeltion(int totalTrial) {
         LCD_set_xy(13, 2);
         lcdWriteString("3|6");
         Valve_ON(6, fullduty);
-        Nop();
-        Nop();
-        Valve_ON(3, fullduty);
+        if (p3) {
+            Nop();
+            Nop();
+            Valve_ON(3, fullduty);
+        }
         delaymSecKey(15000, 3);
         Valve_OFF(6);
         Nop();
@@ -1694,12 +1697,12 @@ void callFunction(int n) {
 
         case 4323:
         {
-            splash("DNMS LR TEACH", "Ramp Laser ++");
+            splash("DNMS LR TASK", "Ramp Laser ++");
             protectedSerialSend(21, 101);
             taskType = _DNMS_LR_TEACH;
             laserTrialType = _LASER_EVERY_TRIAL;
             ramp = 500;
-            zxLaserSessions(3, laserRampDuringDelay, 5, 10, 20, 0.05, 10, 15, 1.0);
+            zxLaserSessions(3, laserRampDuringDelay, 5, 10, 20, 0.05, 20, 15, 1.0);
             break;
         }
 

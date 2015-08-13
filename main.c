@@ -8,15 +8,15 @@ _FWDT(WDT_OFF);
 _FBORPOR(PBOR_ON & 0xFFFF & PWRT_64 & MCLR_EN); //0xFFFF=BORV20=BORV_20
 
 int main(void) {
-    
+
     SetupPorts();
     Init_PWM();
     InitTMR();
     Init_LCD();
     InitUART2();
-//    unsigned char StartText[] = {0x00, 0x01, 0x02, 0x03};
-//    Puts_UART2((unsigned char*) &StartText[0], sizeof (StartText));
-    
+    //    unsigned char StartText[] = {0x00, 0x01, 0x02, 0x03};
+    //    Puts_UART2((unsigned char*) &StartText[0], sizeof (StartText));
+
 
 
     //    Flags.pun = 0;
@@ -97,7 +97,11 @@ int main(void) {
                        lydGoNogoSessions(n==1);
                        break;*/
             case 5555:
-                odorDepeltion(120);
+                odorDepeltion(120, 1);
+                break;
+
+            case 5556:
+                odorDepeltion(120, 0);
                 break;
 
         }

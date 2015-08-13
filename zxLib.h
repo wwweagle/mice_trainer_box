@@ -136,6 +136,7 @@ typedef unsigned int _delayT;
 #define _LICK_ANY (PORTDbits.RD12 || PORTDbits.RD13 || !PORTDbits.RD14 || !PORTDbits.RD15)
 #define _LICKING_LEFT 2
 #define _LICKING_RIGHT 3
+#define _LICKING_BOTH 127
 
 #define _SHAPPING_TASK 10
 #define _DNMS_LEARNING_TASK 19
@@ -188,7 +189,7 @@ void lcdWriteNumber(int n, int digits, int x, int y);
 void lcdWriteChar(char ch, int x, int y);
 void lcdWriteString(char* s);
 
-void odorDepeltion(int totalTrial);
+void odorDepeltion(int totalTrial, int p3);
 
 //void zxDNMSSwiFtchTrial(int DNMS, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int IntervalIn, float delay_before_reward);
 void zxLaserTrial(int type, int FirstOdorIn, float odorLength, _delayT OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
