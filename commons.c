@@ -23,7 +23,6 @@ void safe_wait_ms(int duration) {
     }
 }
 
-
 void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     IFS0bits.T2IF = 0;
     timerCounterI++;
@@ -35,7 +34,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T3Interrupt(void) {
     key_port |= 0x70;
     row4 = 0;
     if (col2 == 0) {
-//        localSendOnce(SpTrain, 127);
+        //        localSendOnce(SpTrain, 127);
         asm("RESET");
     }
 }
@@ -45,7 +44,7 @@ void __attribute__((interrupt, no_auto_psv)) _U2RXInterrupt(void) {
         U2STAbits.OERR = 0;
     }
     if (0x2a == (u2Received = U2RXREG)) {
-//        localSendOnce(SpTrain, 127);
+        //        localSendOnce(SpTrain, 127);
         protectedSerialSend(SpSess, 0);
         safe_wait_ms(50);
         asm("RESET");
@@ -83,8 +82,6 @@ void InitTMR3(void) {
     T3CON = 0x8020;
     ConfigIntTimer3(T3_INT_PRIOR_4 & T3_INT_ON);
 }
-
-
 
 void Init_LCD(void) {
     safe_wait_ms(15);
@@ -277,7 +274,7 @@ void Key_Event(void) {
 
 void SetupPorts(void) {
     ADPCFG = 0xFFFF;
-    
+
     PORTA = 0;
     TRISA = 0xF9FF;
     PORTB = 0;
@@ -314,7 +311,7 @@ void InitUART2(void) {
 
     baudvalue = ((FCY / 16) / BAUDRATE) - 1;
     OpenUART2(U2MODEvalue, U2STAvalue, baudvalue);
-    
+
     int i;
     for (i = 0; i < 4; i++) {
         while (BusyUART2());
@@ -322,16 +319,10 @@ void InitUART2(void) {
     }
 }
 
-void UART2PutChar(unsigned char Ch) {
-
-    while (BusyUART2());
-    U2TXREG = Ch;
-}
-
 void Puts_UART2(unsigned char *data, unsigned char count) {
-    while (count) {
-        UART2PutChar(*data++);
-        count--;
+    while (count--) {
+        while (BusyUART2());
+        U2TXREG = *data++;
     }
 }
 
@@ -447,12 +438,12 @@ void DelayNmSecNew(unsigned int N) {
 
 
 
-char UartSend[] = {0x55, 0x00, 0x00, 0xAA};
+unsigned char UartSend[] = {0x55, 0x00, 0x00, 0xAA};
 
 void localSendOnce(int thisSp, int thisValue) {
     UartSend[1] = thisSp;
     UartSend[2] = thisValue;
-    Puts_UART2((unsigned char*) &UartSend[0], sizeof (UartSend));
+    Puts_UART2(UartSend, sizeof (UartSend));
 }
 
 void counts_dispose(unsigned int counter) {

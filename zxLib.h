@@ -160,7 +160,7 @@ typedef unsigned int _delayT;
 #define _ODOR_A_LIKE ()
 
 //extern float odorLength;
-extern char* zxVer;
+char * getVer(void);
 
 extern unsigned int laserTimer;
 extern unsigned int laserOnTime ;
@@ -181,7 +181,7 @@ extern unsigned int fullduty;
 extern unsigned int lickLCount;
 extern unsigned int lickRCount;
 
-extern const char _DEBUGGING;
+extern const int _DEBUGGING;
 
 
 void shuffleArray(unsigned int orgArray[], unsigned int arraySize);
@@ -192,11 +192,11 @@ void lcdWriteString(char* s);
 void odorDepeltion(int totalTrial, int p3);
 
 //void zxDNMSSwiFtchTrial(int DNMS, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int IntervalIn, float delay_before_reward);
-void zxLaserTrial(int type, int FirstOdorIn, float odorLength, _delayT OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
+//extern static void zxLaserTrial(int type, int FirstOdorIn, float odorLength, _delayT OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
 void callFunction(int n);
 
 
-void wait_ms(int time);
+//void wait_ms(int time);
 //void setLaser(void);
 
 void feedWater();

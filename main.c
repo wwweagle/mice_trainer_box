@@ -22,17 +22,17 @@ int main(void) {
     //    Flags.pun = 0;
 
     //splash("Guys, WRITE YOUR", "HEADER FILE !!!");
-    splash("Mice Trainer", zxVer);
+    splash("Mice Trainer", getVer());
 
 
     while (1) {
         unsigned int n = getFuncNumber(4, "Main Function ?");
         srand(timerCounterI);
         switch (n) {
-            case 1111:
-                n = getFuncNumber(1, " 2  5  10 30 600");
-                feedWater(n);
-                break;
+//            case 1111:
+//                n = getFuncNumber(1, " 2  5  10 30 600");
+//                feedWater(n);
+//                break;
                 //            case 1112:
                 //                test_odorA();
                 //                break;
