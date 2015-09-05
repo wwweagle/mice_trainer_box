@@ -359,17 +359,20 @@ void Init_PWM(void) {
     config3 = (PWM_SEVOPS1 & PWM_OSYNC_PWM & PWM_UEN);
     OpenMCPWM(period, sptime, config1, config2, config3);
 
+#define FULLDUTY 0xfe
+
     PORTFbits.RF0 = 1;
     Nop();
     Nop();
     PORTCbits.RC1 = 1;
     Nop();
     Nop();
-    PDC2 = fullduty;
+    PDC2 = FULLDUTY;
     Nop();
     Nop();
-    PDC4 = fullduty;
+    PDC4 = FULLDUTY;
 }
+#undef FULLDUTY
 
 void Valve_ON(unsigned int N, unsigned int rate) {
     switch (N) {
@@ -422,17 +425,10 @@ void Valve_OFF(unsigned int N) {
 }
 
 void DelayNuSec(unsigned int n) {
-    if (_DEBUGGING) return;
+#ifndef DEBUG
     int i;
     for (i = 0; i < n; i++);
-}
-
-void DelayNmSecNew(unsigned int N) {
-    if (_DEBUGGING) return; //DEBUG
-    timerCounterJ = 0;
-    while (timerCounterJ < N) {
-        //        Nop();
-    }
+#endif
 }
 
 
@@ -477,11 +473,10 @@ void counts_dispose(unsigned int counter) {
 }
 
 unsigned int getFuncNumber(int targetDigits, char* input) {
-    if (_DEBUGGING) {
-        int n = 0;
-        return n;
-    }
-
+#ifdef DEBUG
+    int n = 0;
+    return n;
+#else
     int bitSet[targetDigits];
     int bitValue[targetDigits];
     unsigned int n;
@@ -525,6 +520,7 @@ unsigned int getFuncNumber(int targetDigits, char* input) {
         n = n * 10 + bitValue[iter1];
     }
     return n;
+#endif
 }
 
 

@@ -19,6 +19,16 @@ extern "C" {
 //#define zxLibVer "z611"
 
 typedef unsigned long _prog_addressT;
+
+typedef struct {
+    unsigned char L_Hi;
+    unsigned char L_Lo;
+    unsigned char R_Hi;
+    unsigned char R_Lo;
+    const unsigned char fullDuty;
+} PWM;
+
+
 #define _EE_WORD         2
 #define _memcpy_p2d16(dest, src, len)  _memcpy_helper(src, dest, len, 0) 
 #define _wait_eedata() { while (NVMCONbits.WR); }
@@ -27,7 +37,7 @@ typedef unsigned long _prog_addressT;
 extern void _eedata_helper1(_prog_addressT dst, int len);
 extern void _eedata_helper3(_prog_addressT dst, int dat);
 extern _prog_addressT _memcpy_helper(_prog_addressT src, void *dst,
-                                     unsigned int len, int flags);
+        unsigned int len, int flags);
 
 
 typedef unsigned int _delayT;
@@ -115,61 +125,67 @@ typedef unsigned int _delayT;
 
 
 //Laser Delivery Type, including ZJ's variety
-#define _LASER_OTHER_TRIAL 1
-#define _LASER_NO_TRIAL 2
-#define _LASER_EVERY_TRIAL 3
+#define LASER_OTHER_TRIAL 1
+#define LASER_NO_TRIAL 2
+#define LASER_EVERY_TRIAL 3
 //#define laserFollowOdorA 4
 //#define laserFollowOdorB 5
 //#define laser1and2Half 6
 //#define laser3and4Quarter 10
-#define _LASER_LR_EACH_QUARTER 20
-#define _LASER_EACH_QUARTER 21
-#define _LASER_12s_LR_EACH_QUARTER 25
-#define _LASER_12s_EACH_QUARTER 26
-#define _LASER_VARY_LENGTH 30
-#define _LASER_LR_EVERYTRIAL 40
-#define _LASER_INCONGRUENT_CATCH_TRIAL 45
+#define LASER_LR_EACH_QUARTER 20
+#define LASER_EACH_QUARTER 21
+#define LASER_12s_LR_EACH_QUARTER 25
+#define LASER_12s_EACH_QUARTER 26
+#define LASER_VARY_LENGTH 30
+#define LASER_LR_EVERYTRIAL 40
+#define LASER_INCONGRUENT_CATCH_TRIAL 45
 //#define laserCycleDelayLaser 30
 
-#define _LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
-#define _LICK_RIGHT (PORTDbits.RD13 || !PORTDbits.RD15)
-#define _LICK_ANY (PORTDbits.RD12 || PORTDbits.RD13 || !PORTDbits.RD14 || !PORTDbits.RD15)
-#define _LICKING_LEFT 2
-#define _LICKING_RIGHT 3
-#define _LICKING_BOTH 127
+#define LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
+#define LICK_RIGHT (PORTDbits.RD13 || !PORTDbits.RD15)
+#define LICK_ANY (PORTDbits.RD12 || PORTDbits.RD13 || !PORTDbits.RD14 || !PORTDbits.RD15)
+#define LICKING_LEFT 2
+#define LICKING_RIGHT 3
+#define LICKING_BOTH 127
 
-#define _SHAPPING_TASK 10
-#define _DNMS_LEARNING_TASK 19
-#define _DNMS_TASK 20
+#define SHAPPING_TASK 10
+#define DNMS_LEARNING_TASK 19
+#define DNMS_TASK 20
 //#define _ASSOCIATE_SHAPPING_TASK 24
 //#define _ASSOCIATE_TASK 25
-#define _GONOGO_TASK 30
-#define _DNMS_LR_TEACH 38
-#define _DNMS_LR_LEARNING_TASK 39
-#define _DNMS_LR_TASK 40
-#define _GONOGO_LR_TEACH 49
-#define _GONOGO_LR_TASK 50
-#define _NO_ODOR_CATCH_TRIAL_TASK 60
+#define GONOGO_TASK 30
+#define DNMS_LR_TEACH 38
+#define DNMS_LR_LEARNING_TASK 39
+#define DNMS_LR_TASK 40
+#define GONOGO_LR_TEACH 49
+#define GONOGO_LR_TASK 50
+#define NO_ODOR_CATCH_TRIAL_TASK 60
 
 
-#define _EEP_DUTY_LOW_L_OFFSET 0
-#define _EEP_DUTY_HIGH_L_OFFSET 2
-#define _EEP_DUTY_LOW_R_OFFSET 4
-#define _EEP_DUTY_HIGH_R_OFFSET 6
+#define EEP_DUTY_LOW_L_OFFSET 0
+#define EEP_DUTY_HIGH_L_OFFSET 2
+#define EEP_DUTY_LOW_R_OFFSET 4
+#define EEP_DUTY_HIGH_R_OFFSET 6
 
-#define _ODOR_A_LIKE ()
+
+
+#define PERM_INFO 21
+
+#define DMS_LR_Teach_LOFF 100
+#define DMS_LR_Teach_LON 101
+#define MSWOD_LR_Teach_LOFF 102
+#define DMS_LR_Teach_ONOFF 103
+
 
 //extern float odorLength;
 char * getVer(void);
 
 extern unsigned int laserTimer;
-extern unsigned int laserOnTime ;
-extern unsigned int laserOffTime ;
+extern unsigned int laserOnTime;
+extern unsigned int laserOffTime;
 
 extern unsigned int ramp;
 extern unsigned int ramping;
-extern unsigned char pwmDutyHiR;
-extern unsigned char pwmDutyLoR;
 extern unsigned int laserTimerOn;
 extern unsigned int licking;
 extern const char odorTypes[];
@@ -177,7 +193,6 @@ extern unsigned int timeFilter;
 extern unsigned int laserTrialType;
 extern unsigned int taskType;
 extern unsigned int lickFlag;
-extern unsigned int fullduty;
 extern unsigned int lickLCount;
 extern unsigned int lickRCount;
 
