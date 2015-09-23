@@ -29,15 +29,15 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     timerCounterJ++;
 }
 
-void __attribute__((__interrupt__, no_auto_psv)) _T3Interrupt(void) {
-    IFS0bits.T3IF = 0;
-    key_port |= 0x70;
-    row4 = 0;
-    if (col2 == 0) {
-        //        localSendOnce(SpTrain, 127);
-        asm("RESET");
-    }
-}
+//void __attribute__((__interrupt__, no_auto_psv)) _T3Interrupt(void) {
+//    IFS0bits.T3IF = 0;
+//    key_port |= 0x70;
+//    row4 = 0;
+//    if (col2 == 0) {
+//        //        localSendOnce(SpTrain, 127);
+//        asm("RESET");
+//    }
+//}
 
 void __attribute__((interrupt, no_auto_psv)) _U2RXInterrupt(void) {
     if (U2STAbits.OERR == 1) {
@@ -69,19 +69,19 @@ void InitTMR(void) {
     T2CON = 0x8020;
     ConfigIntTimer2(T2_INT_PRIOR_5 & T2_INT_ON);
 
-    InitTMR3();
+//    InitTMR3();
     Init_Keypad();
     //    Valve_ON(8, period + period / 2);
 }
 
-void InitTMR3(void) {
-    TMR3 = 0;
-    PR3 = 65535;
-    IFS0bits.T3IF = 0;
-    IEC0bits.T3IE = 1;
-    T3CON = 0x8020;
-    ConfigIntTimer3(T3_INT_PRIOR_4 & T3_INT_ON);
-}
+//void InitTMR3(void) {
+//    TMR3 = 0;
+//    PR3 = 65535;
+//    IFS0bits.T3IF = 0;
+//    IEC0bits.T3IE = 1;
+//    T3CON = 0x8020;
+//    ConfigIntTimer3(T3_INT_PRIOR_4 & T3_INT_ON);
+//}
 
 void Init_LCD(void) {
     safe_wait_ms(15);
@@ -431,12 +431,8 @@ void DelayNuSec(unsigned int n) {
 #endif
 }
 
-
-
-
-unsigned char UartSend[] = {0x55, 0x00, 0x00, 0xAA};
-
 void localSendOnce(int thisSp, int thisValue) {
+    static unsigned char UartSend[] = {0x55, 0x00, 0x00, 0xAA};
     UartSend[1] = thisSp;
     UartSend[2] = thisValue;
     Puts_UART2(UartSend, sizeof (UartSend));
@@ -499,7 +495,7 @@ unsigned int getFuncNumber(int targetDigits, char* input) {
                 u2Received = -1;
             } else {
                 Key_Event();
-                if (hardwareKey == 1) {
+                if (hardwareKey) {
                     hardwareKey = 0;
                     bitValue[iter] = key_val;
                     bitSet[iter] = 1;

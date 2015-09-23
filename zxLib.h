@@ -26,8 +26,25 @@ typedef struct {
     unsigned char R_Hi;
     unsigned char R_Lo;
     const unsigned char fullDuty;
-} PWM;
+} PWM_T;
 
+typedef struct {
+    unsigned int timer;
+    unsigned int onTime;
+    unsigned int offTime;
+    unsigned int ramp;
+    unsigned int ramping;
+    unsigned int on;
+    unsigned int side;
+} LASER_T;
+
+typedef struct {
+    unsigned int current;
+    unsigned int filter;
+    unsigned int flag;
+    unsigned int LCount;
+    unsigned int RCount;
+} LICK_T;
 
 #define _EE_WORD         2
 #define _memcpy_p2d16(dest, src, len)  _memcpy_helper(src, dest, len, 0) 
@@ -175,26 +192,27 @@ typedef unsigned int _delayT;
 #define DMS_LR_Teach_LON 101
 #define MSWOD_LR_Teach_LOFF 102
 #define DMS_LR_Teach_ONOFF 103
+#define DMS_LR_5Delay_Laser 104
+#define DMS_LR_8Delay_Laser 105
+#define DMS_LR_12Delay_Laser 106
+#define DMS_LR_1Odor_Laser 107
+#define DMS_LR_2Odor_Laser 108
+#define DMS_LR_bothOdor_Laser 109
+#define DMS_LR_baseline_Laser 110
+#define DMS_LR_response_Laser 111
 
 
 //extern float odorLength;
 char * getVer(void);
 
-extern unsigned int laserTimer;
-extern unsigned int laserOnTime;
-extern unsigned int laserOffTime;
-
-extern unsigned int ramp;
-extern unsigned int ramping;
-extern unsigned int laserTimerOn;
-extern unsigned int licking;
 extern const char odorTypes[];
-extern unsigned int timeFilter;
 extern unsigned int laserTrialType;
 extern unsigned int taskType;
-extern unsigned int lickFlag;
-extern unsigned int lickLCount;
-extern unsigned int lickRCount;
+//extern unsigned int licking;
+//extern unsigned int timeFilter;
+//extern unsigned int lickFlag;
+//extern unsigned int lickLCount;
+//extern unsigned int lickRCount;
 
 extern const int _DEBUGGING;
 
