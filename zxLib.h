@@ -46,6 +46,12 @@ typedef struct {
     unsigned int RCount;
 } LICK_T;
 
+typedef struct{
+    unsigned int odor1Length;
+    unsigned int odor2Length;
+    unsigned int distractorLength;
+} ODOR_T;
+
 #define _EE_WORD         2
 #define _memcpy_p2d16(dest, src, len)  _memcpy_helper(src, dest, len, 0) 
 #define _wait_eedata() { while (NVMCONbits.WR); }
@@ -155,6 +161,7 @@ typedef unsigned int _delayT;
 #define LASER_12s_EACH_QUARTER 26
 #define LASER_VARY_LENGTH 30
 #define LASER_LR_EVERYTRIAL 40
+#define LASER_LR_EVERY_OTHER_TRIAL 42
 #define LASER_INCONGRUENT_CATCH_TRIAL 45
 //#define laserCycleDelayLaser 30
 
@@ -177,6 +184,7 @@ typedef unsigned int _delayT;
 #define GONOGO_LR_TEACH 49
 #define GONOGO_LR_TASK 50
 #define NO_ODOR_CATCH_TRIAL_TASK 60
+#define VARY_ODOR_LENGTH_TASK 70
 
 
 #define EEP_DUTY_LOW_L_OFFSET 0
