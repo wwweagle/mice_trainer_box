@@ -47,10 +47,10 @@ typedef struct {
 } LICK_T;
 
 typedef struct{
-    unsigned int odor1Length;
-    unsigned int odor2Length;
+    unsigned int stim1Length;
+    unsigned int stim2Length;
     unsigned int distractorLength;
-} ODOR_T;
+} STIM_T;
 
 #define _EE_WORD         2
 #define _memcpy_p2d16(dest, src, len)  _memcpy_helper(src, dest, len, 0) 
@@ -165,6 +165,14 @@ typedef unsigned int _delayT;
 #define LASER_INCONGRUENT_CATCH_TRIAL 45
 //#define laserCycleDelayLaser 30
 
+#define LASER_CUE_OFFSET_0 20
+#define LASER_CUE_TYPE_I 21
+#define LASER_CUE_TYPE_II 22
+#define LASER_CUE_TYPE_III 23
+#define LASER_CUE_TYPE_IV 24
+
+
+
 #define LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
 #define LICK_RIGHT (PORTDbits.RD13 || !PORTDbits.RD15)
 #define LICK_ANY (PORTDbits.RD12 || PORTDbits.RD13 || !PORTDbits.RD14 || !PORTDbits.RD15)
@@ -232,19 +240,21 @@ void lcdWriteString(char* s);
 
 void odorDepeltion(int totalTrial, int p3);
 
-//void zxDNMSSwiFtchTrial(int DNMS, int FirstOdorIn, float odorLength, float OdorDelayIn, int SecondOdorIn, float WaterLIn, int IntervalIn, float delay_before_reward);
 //extern static void zxLaserTrial(int type, int FirstOdorIn, float odorLength, _delayT OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
 void callFunction(int n);
 
 
-//void wait_ms(int time);
+void wait_ms(int time);
 //void setLaser(void);
 
-void feedWater();
+//void feedWater();
 void splash(char s1[], char s2[]);
 
 void initZXTMR(void);
 void protectedSerialSend(int type, int value);
 int ppLaserSessions(int trialsPerSession, int missLimit, int totalSession);
+
+int read_eeprom(int offset);
+void write_eeprom(int offset, int value);
 
 #endif	/* ZXLIB_H */

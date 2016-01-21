@@ -520,3 +520,17 @@ unsigned int getFuncNumber(int targetDigits, char* input) {
 }
 
 
+#ifdef CQ_lickOrAll
+
+//THIS IS BAD PRACTICE, YOU SHOULD AVOID USE THIS IF POSSIBLE
+//ONLY FOR BACKWARD COMPATIBILITY WITH CQ
+void DelayNmSecNew(unsigned int N) {
+#ifdef DEBUG
+    return;
+#endif
+    timerCounterJ = 0;
+    while (timerCounterJ < N) {
+    }
+}
+#endif
+
