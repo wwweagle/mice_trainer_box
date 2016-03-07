@@ -8,7 +8,7 @@ STIM_T stims = {.stim1Length = 1000u, .stim2Length = 1000u, .distractorLength = 
 LASER_T laser = {.timer = 0, .onTime = 65535u, .offTime = 0, .ramp = 0, .ramping = 0, .on = 0, .side = 3u};
 PWM_T pwm = {.L_Hi = 0xfe, .R_Hi = 0xfe, .L_Lo = 0, .R_Lo = 0, .fullDuty = 0xfe};
 LICK_T lick = {.current = 0, .filter = 0, .flag = 0, .LCount = 0, .RCount = 0};
-const char odorTypes[] = {' ', 'W', 'B', 'J', 'w', 'R', 'Q', 'r', 'q', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '1', '2', '3'};
+const char odorTypes[] = " WBJlRQMN0123456789012345678901234567890123456789";
 unsigned int laserTrialType = LASER_EVERY_TRIAL;
 unsigned int taskType = DNMS_TASK;
 unsigned int wait_Trial = 1u;
@@ -165,7 +165,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
 
 static int setType(void) {
 
-    int ports[] = {0, 0, 3, 5, 19, 20};
+    int ports[] = {0, 2, 5, 7, 20, 22};
     return ports[getFuncNumber(1, "23 56 78 OB1 OB2")];
 }
 
@@ -177,9 +177,9 @@ static int setSessionNum() {
 
 static int setDelay(int type) {
     if (type == 1) {
-        int d[] = {5, 4, 5, 8, 12};
-        int n = getFuncNumber(1, "4s 5s 8s 12s");
-        if (n > 0 && n < 5)
+        int d[] = {5, 4, 5, 8, 12, 16, 20};
+        int n = getFuncNumber(1, "4 5 8 12 16 20");
+        if (n > 0 && n < 7)
             return d[n];
         else return 5;
     }
@@ -515,6 +515,25 @@ void lcdWriteString(char s[]) {
     }
 }
 
+int lcdMarqueeString(char s[], int l) {
+    static unsigned int last;
+    int startIdx = (timerCounterJ >> 9) % l;
+    if (startIdx != last) {
+        last = startIdx;
+        home_clr();
+        int i = 0;
+        for (; i < 16; i++) {
+            while (l - 1 < i + startIdx) {
+                startIdx -= l;
+            }
+            lcd_data(s[i + startIdx]);
+        }
+        return 1;
+    }
+    return 0;
+
+}
+
 void lcdWriteNumber(int n, int digits, int x, int y) {
     if (digits < 1) {
         return;
@@ -540,6 +559,55 @@ void lcdWriteChar(char ch, int x, int y) {
 
     lcd_cmd((y == 1 ? 0x7f : 0xbf) + x);
     lcd_data(ch);
+}
+
+unsigned int getFuncNumberMarquee(int targetDigits, char input[], int l) {
+#ifdef DEBUG
+    int n = 0;
+    return n;
+#else
+    int bitSet[targetDigits];
+    int bitValue[targetDigits];
+    unsigned int n;
+    int iter;
+    int iter1;
+
+    for (iter = 0; iter < targetDigits; iter++) {
+        bitSet[iter] = 0;
+        bitValue[iter] = -6;
+    }
+
+    home_clr();
+    for (iter = 0; iter < targetDigits; iter++) {
+        while (!bitSet[iter]) {
+            if (lcdMarqueeString(input, l)) {
+                line_2();
+                for (iter1 = 0; iter1 < targetDigits; iter1++) {
+                    lcd_data(bitValue[iter1] + 0x30);
+                }
+            }
+            if (u2Received > 0) {
+                bitValue[iter] = u2Received - 0x30;
+                bitSet[iter] = 1;
+                u2Received = -1;
+            } else {
+                Key_Event();
+                if (hardwareKey) {
+                    hardwareKey = 0;
+                    bitValue[iter] = key_val;
+                    bitSet[iter] = 1;
+                }
+            }
+        }
+        localSendOnce(SpCome, bitValue[iter]);
+        safe_wait_ms(300);
+    }
+    n = 0;
+    for (iter1 = 0; iter1 < targetDigits; iter1++) {
+        n = n * 10 + bitValue[iter1];
+    }
+    return n;
+#endif
 }
 
 void write_eeprom(int offset, int value) {
@@ -724,7 +792,8 @@ static void waitTrial() {
     u2Received = -1;
 }
 
-static void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI, int trialsPerSession, float WaterLen, int missLimit, int totalSession, float delay_before_reward) {
+static void zxLaserSessions(int stim1, int stim2, int laserType, _delayT delay, int ITI, int trialsPerSession, float WaterLen, int missLimit, int totalSession, float delay_before_reward) {
+
     //    wait_ms(1000);
     int currentTrial = 0;
     int currentSession = 0;
@@ -757,23 +826,23 @@ static void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI,
                 switch (taskType) {
 
                     case DNMS_TASK:
-                        firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
-                        secondOdor = (index == 1 || index == 2) ? odor_A : odor_B;
+                        firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
+                        secondOdor = (index == 1 || index == 2) ? stim1 : stim2;
                         break;
                     case SHAPPING_TASK:
-                        firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
-                        secondOdor = (firstOdor == odor_A) ? odor_B : odor_A;
+                        firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
+                        secondOdor = (firstOdor == stim1) ? stim2 : stim1;
                         break;
                     case GONOGO_TASK:
                     case GONOGO_LR_TASK:
-                        firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
-                        secondOdor = -odorType;
+                        firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
+                        secondOdor = 0;
                         break;
                     case DNMS_LR_TASK:
                     case DNMS_LR_TEACH:
                         if (hit > lastHit || currentTrial == 0) {
-                            firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
-                            secondOdor = (index == 1 || index == 2) ? odor_A : odor_B;
+                            firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
+                            secondOdor = (index == 1 || index == 2) ? stim1 : stim2;
                             lastOdor1 = firstOdor;
                             lastOdor2 = secondOdor;
                         } else {
@@ -785,24 +854,24 @@ static void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI,
                         break;
                     case GONOGO_LR_TEACH:
                         if (hit > lastHit || currentTrial == 0) {
-                            firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
+                            firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
                             lastOdor1 = firstOdor;
-                            secondOdor = -odorType;
+                            secondOdor = 0;
                         } else {
                             firstOdor = lastOdor1;
-                            secondOdor = -odorType;
+                            secondOdor = 0;
                         }
 
                         lastHit = hit;
                         break;
                     case NO_ODOR_CATCH_TRIAL_TASK:
-                        firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
-                        secondOdor = (index == 1 || index == 2) ? odor_A : odor_B;
-                        if ((currentTrial > 3 && currentTrial < 8 && firstOdor == odor_A && secondOdor == odor_A)
-                                || (currentTrial > 7 && currentTrial < 12 && firstOdor == odor_A && secondOdor == odor_B)
-                                || (currentTrial > 11 && currentTrial < 16 && firstOdor == odor_B && secondOdor == odor_A)
-                                || (currentTrial > 15 && currentTrial < 20 && firstOdor == odor_B && secondOdor == odor_B)) {
-                            firstOdor -= odorType;
+                        firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
+                        secondOdor = (index == 1 || index == 2) ? stim1 : stim2;
+                        if ((currentTrial > 3 && currentTrial < 8 && firstOdor == stim1 && secondOdor == stim1)
+                                || (currentTrial > 7 && currentTrial < 12 && firstOdor == stim1 && secondOdor == stim2)
+                                || (currentTrial > 11 && currentTrial < 16 && firstOdor == stim2 && secondOdor == stim1)
+                                || (currentTrial > 15 && currentTrial < 20 && firstOdor == stim2 && secondOdor == stim2)) {
+                            firstOdor -= 3;
                         } else {
                         }
                         break;
@@ -810,8 +879,8 @@ static void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI,
                     case VARY_ODOR_LENGTH_TASK:
                     {
                         static int varyLengths[] = {250, 500, 750, 1000};
-                        firstOdor = (index == 0 || index == 2) ? odor_A : odor_B;
-                        secondOdor = (index == 1 || index == 2) ? odor_A : odor_B;
+                        firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
+                        secondOdor = (index == 1 || index == 2) ? stim1 : stim2;
                         unsigned int idxO1 = shuffledLongList[currentTrial]&0x03;
                         unsigned int idxO2 = shuffledLongList[currentTrial] >> 2;
                         stims.stim1Length = varyLengths[idxO1];
@@ -824,9 +893,11 @@ static void zxLaserSessions(int odorType, int laserType, _delayT delay, int ITI,
                         break;
                     }
 
+                    case OPTO_DPAL_TASK:
+                        firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
+                        secondOdor = (index == 1 || index == 2) ? stim1 : stim2;
+
                 }
-                firstOdor += odorType;
-                secondOdor += odorType;
 
                 lcdWriteChar(odorTypes[firstOdor], 1, 1);
                 lcdWriteChar(odorTypes[secondOdor], 2, 1);
@@ -1007,6 +1078,7 @@ static void optoStim(int stim, int length, int place) {
 
 static void stim(int place, int stim, int type, int laserOnTrial) {
     switch (stim) {
+        case 0:
         case 2:
         case 3:
         case 5:
@@ -1035,13 +1107,15 @@ static void stim(int place, int stim, int type, int laserOnTrial) {
             assertLaser(type, place == 1 ? atFirstOdorEnd : atSecondOdorEnd, laserOnTrial);
             protectedSerialSend(stimSend, 0);
             lcdWriteChar(place == 1 ? 'd' : 'D', 4, 1);
-            waitJ(1000 - place == 1 ? stims.stim1Length : stims.stim2Length);
+            waitJ(1000 - (place == 1 ? stims.stim1Length : stims.stim2Length));
             break;
-        case 20:
-        case 21:
-        case 22:
-        case 23:
-            optoStim(stim, place == 1 ? stims.stim1Length : stims.stim2Length, place);
+            //        case 20:
+            //        case 21:
+            //        case 22:
+            //        case 23:
+            //            optoStim(stim, place == 1 ? stims.stim1Length : stims.stim2Length, place);
+            //            break;
+        case 10:
             break;
 
     }
@@ -1060,29 +1134,9 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
     assertLaser(type, at200mSBeforeFirstOdor, laserOnTrial);
     waitJ(200);
     assertLaser(type, atFirstOdorBeginning, laserOnTrial);
+    /////////////////////////////////////////////////
     stim(1, firstOdor, type, laserOnTrial);
-    //    Valve_ON(firstOdor, pwm.fullDuty);
-    //    int firstSend;
-    //    if (firstOdor == 2 || firstOdor == 5 || firstOdor == 7) {
-    //        firstSend = 9;
-    //        Out2 = 1;
-    //    } else {
-    //        firstSend = 10;
-    //        Out3 = 1;
-    //    }
-    //    protectedSerialSend(firstSend, firstOdor);
-    //    lcdWriteChar('1', 4, 1);
-    //    waitJ(odors.odor1Length);
-    //    Valve_OFF(firstOdor);
-    //    Out2 = 0;
-    //    Nop();
-    //    Nop();
-    //    Out3 = 0;
-    //    Nop();
-    //    Nop();
-    //    assertLaser(type, atFirstOdorEnd, laserOnTrial);
-    //    protectedSerialSend(firstSend, 0);
-    //    waitJ(1000 - odors.odor1Length);
+    ////////////////////////////////////////////////
     if (interOdorDelay == 0) {
         waitJ(200);
     } else {
@@ -1092,6 +1146,7 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
         assertLaser(type, atDelay_5SecIn, laserOnTrial);
         waitJ(500);
         assertLaser(type, atDelay1SecIn, laserOnTrial);
+
         if (interOdorDelay < 4) {
             waitJ(interOdorDelay * 1000 - 2000);
         } else {
@@ -1104,6 +1159,7 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
                 waitJ(500);
             }
             assertLaser(type, atDelay2SecIn, laserOnTrial);
+
             if (interOdorDelay == 12) {
                 waitJ(500);
                 assertLaser(type, atDelay2_5SecIn, laserOnTrial);
@@ -1113,6 +1169,7 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
             } else {
                 waitJ(interOdorDelay * 500 - 2500);
             }
+
             assertLaser(type, atDelay_5ToMiddle, laserOnTrial);
             waitJ(500);
             assertLaser(type, atDelayMiddle, laserOnTrial);
@@ -1148,32 +1205,7 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
     } else {
         ///////////-Second odor-/////////////////
         stim(2, secondOdor, type, laserOnTrial);
-        //        Valve_ON(secondOdor, pwm.fullDuty);
-        //        //    if (secondOdor == odor_A) Out1 = 1;
-        //        //    else if (secondOdor == odor_B) Out2 = 1;
-        //        int secondSend;
-        //        if (secondOdor == 2 || secondOdor == 5 || secondOdor == 7) {
-        //            secondSend = 9;
-        //            Out2 = 1;
-        //        } else {
-        //            secondSend = 10;
-        //            Out3 = 1;
-        //        }
-        //        protectedSerialSend(secondSend, secondOdor);
-        //        lcdWriteChar('2', 4, 1);
-        //        waitJ(odors.stim2Length - 10);
-        //
-        //        Valve_OFF(secondOdor);
-        //        assertLaser(type, atSecondOdorEnd, laserOnTrial);
-        //        Out2 = 0;
-        //        Nop();
-        //        Nop();
-        //        Out3 = 0;
-        //        Nop();
-        //        Nop();
-        //        protectedSerialSend(secondSend, 0);
-        //        waitJ(1000 - odors.stim2Length - 10);
-        ////////-delay before reward-///////
+        //////////////////////////////////////////
     }
     waitJ(delay_before_reward * 1000);
     assertLaser(type, atRewardBeginning, laserOnTrial);
@@ -1669,7 +1701,7 @@ void callFunction(int n) {
             splash("No Odor Catch", "");
 
             laserTrialType = LASER_LR_EVERYTRIAL;
-            zxLaserSessions(3, laserRampDuringDelay, 2, 5, 20, 0.05, 20, 15, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 2, 5, 20, 0.05, 20, 15, 1.0);
             break;
 
         case 4302:
@@ -1679,36 +1711,44 @@ void callFunction(int n) {
             laserTrialType = LASER_NO_TRIAL;
             int delay = setDelay(1);
             highLevelShuffleLength = 16;
-            zxLaserSessions(setType(), laserDuringDelayChR2, delay, delay * 2, 16, 0.05, 20, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelayChR2, delay, delay * 2, 16, 0.05, 20, setSessionNum(), 1.0);
             break;
         }
         case 4303:
             splash("Each Quarter", "Delay LR Laser");
             laserTrialType = LASER_LR_EACH_QUARTER;
             laser.ramp = 500;
-            zxLaserSessions(3, laserDuringDelay, 12, 24, 20, 0.05, 20, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserDuringDelay, 12, 24, 20, 0.05, 20, setSessionNum(), 1.0);
             break;
         case 4304:
+        {
             splash("OB Opto Stim ", "Shaping");
             laserTrialType = LASER_NO_TRIAL;
             taskType = SHAPPING_TASK;
-            zxLaserSessions(setType(), laserDuringDelay, 4, 8, 20, 0.05, 50, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay, 4, 8, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
+        }
         case 4305:
         {
             splash("OB Opto Stim", "DNMS");
             taskType = DNMS_TASK;
             laserTrialType = LASER_NO_TRIAL;
-            zxLaserSessions(setType(), laserDuringDelayChR2, 5, 10, 20, 0.05, 20, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelayChR2, 5, 10, 20, 0.05, 20, setSessionNum(), 1.0);
             break;
         }
         case 4306:
+        {
             splash("OB Opto Stim", "Go No-Go");
-            //            zxGoNogoSessions(setType(), 3, 20, 1, 0.5, 4);
+            //            zxGoNogoSessions(type,type+1,3, 20, 1, 0.5, 4);
             laserTrialType = LASER_NO_TRIAL;
             taskType = GONOGO_TASK;
-            zxLaserSessions(setType(), laserDuring3Baseline, 0, 5, 20, 0.05, 20, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuring3Baseline, 0, 5, 20, 0.05, 20, setSessionNum(), 1.0);
             break;
+        }
         case 4310:
         {
             int m = getFuncNumber(2, "Time in ms");
@@ -1720,32 +1760,38 @@ void callFunction(int n) {
             break;
 
         case 4312:
+        {
             splash("Response Delay", "Laser Control");
             laserTrialType = LASER_OTHER_TRIAL;
-            zxLaserSessions(setType(), laserDuringResponseDelay, 5, 10, 20, 0.05, 20, 20, 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringResponseDelay, 5, 10, 20, 0.05, 20, 20, 1.0);
             break;
-
+        }
         case 4313:
+        {
             splash("GoNogo Control", "For DNMS");
-            //            zxGoNogoSessions(setType(), 3, 20, 1, 0.5, 4);
+
             laserTrialType = LASER_OTHER_TRIAL;
             taskType = GONOGO_TASK;
-            zxLaserSessions(setType(), laserDuring3Baseline, 0, 5, 20, 0.05, 20, 20, 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuring3Baseline, 0, 5, 20, 0.05, 20, 20, 1.0);
             break;
-
+        }
         case 4314:
+        {
             splash("Vary Length", "Delay Laser");
             laserTrialType = LASER_VARY_LENGTH;
             laser.ramp = 500;
-            zxLaserSessions(setType(), laserDuringDelay, 5, 10, 20, 0.05, 15, 25, 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay, 5, 10, 20, 0.05, 15, 25, 1.0);
             laser.ramp = 0;
             break;
-
+        }
         case 4315:
             splash("Each Quarter", "Delay Laser");
             laserTrialType = LASER_EACH_QUARTER;
             laser.ramp = 500;
-            zxLaserSessions(3, laserDuringDelay, 8, 16, 20, 0.05, 20, 15, 1.0);
+            zxLaserSessions(5, 6, laserDuringDelay, 8, 16, 20, 0.05, 20, 15, 1.0);
             laser.ramp = 0;
             break;
 
@@ -1759,7 +1805,7 @@ void callFunction(int n) {
             splash("No Odor Catch", "");
 
             laserTrialType = LASER_LR_EVERYTRIAL;
-            zxLaserSessions(3, laserRampDuringDelay, 12, 24, 20, 0.05, 20, 15, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 12, 24, 20, 0.05, 20, 15, 1.0);
             break;
 
 
@@ -1780,7 +1826,7 @@ void callFunction(int n) {
             splash("LR LASER DNMS", "Sufficiency");
             int delay = setDelay(1);
             laserTrialType = LASER_LR_EVERYTRIAL;
-            zxLaserSessions(3, laserRampDuringDelay, delay, delay * 2, 20, 0.05, 20, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, delay, delay * 2, 20, 0.05, 20, setSessionNum(), 1.0);
             break;
         }
 
@@ -1788,7 +1834,7 @@ void callFunction(int n) {
             splash("12s Each Quarter", "Delay LR Laser");
             laserTrialType = LASER_12s_LR_EACH_QUARTER;
             laser.ramp = 500;
-            zxLaserSessions(3, laserDuringDelay, 12, 24, 20, 0.05, 25, 15, 1.0);
+            zxLaserSessions(5, 6, laserDuringDelay, 12, 24, 20, 0.05, 25, 15, 1.0);
             laser.ramp = 0;
             break;
         case 4321:
@@ -1805,7 +1851,7 @@ void callFunction(int n) {
             //                case 3: m = laserDuringBaseAndResponse;
             //                    break;
             //            }
-            //            zxLaserSessions(setType(), m, 0.2, 5, 20, 0.05, 20, 20, 1.0);
+            //            zxLaserSessions(type,type+1,m, 0.2, 5, 20, 0.05, 20, 20, 1.0);
             break;
         case 4322:
             variableVoltage();
@@ -1817,7 +1863,7 @@ void callFunction(int n) {
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_EVERY_TRIAL;
             laser.ramp = 500;
-            zxLaserSessions(3, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4324:
@@ -1826,13 +1872,13 @@ void callFunction(int n) {
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
-            zxLaserSessions(3, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4325:
             splash("BaseLine RQ", "Control");
             laserTrialType = LASER_OTHER_TRIAL;
-            zxLaserSessions(3, laserDuring3Baseline, 5, 10, 20, 0.05, 20, 15, 1.0);
+            zxLaserSessions(5, 6, laserDuring3Baseline, 5, 10, 20, 0.05, 20, 15, 1.0);
             break;
 
         case 4326:
@@ -1840,7 +1886,7 @@ void callFunction(int n) {
             laser.ramp = 500;
             splash("Incongrument", "LR Laser");
             laserTrialType = LASER_INCONGRUENT_CATCH_TRIAL;
-            zxLaserSessions(3, laserRampDuringDelay, 12, 24, 20, 0.05, 20, 15, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 12, 24, 20, 0.05, 20, 15, 1.0);
             break;
 
         case 4327:
@@ -1848,7 +1894,7 @@ void callFunction(int n) {
             protectedSerialSend(PERM_INFO, DMS_LR_Teach_LOFF);
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_NO_TRIAL;
-            zxLaserSessions(3, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4328:
@@ -1856,7 +1902,7 @@ void callFunction(int n) {
             protectedSerialSend(PERM_INFO, MSWOD_LR_Teach_LOFF);
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_NO_TRIAL;
-            zxLaserSessions(3, laserRampDuringDelay, 0, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 0, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4329:
@@ -1865,7 +1911,7 @@ void callFunction(int n) {
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
-            zxLaserSessions(3, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4330:
@@ -1874,21 +1920,24 @@ void callFunction(int n) {
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
-            zxLaserSessions(3, laserRampDuringDelay, 8, 16, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 8, 16, 20, 0.05, 30, 20, 1.0);
             break;
 
 
         case 4331:
+        {
             splash("Delay+Odor2", "Control");
             laserTrialType = LASER_OTHER_TRIAL;
-            zxLaserSessions(setType(), laserDuringDelay_Odor2, 5, 10, 20, 0.05, 20, 15, 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay_Odor2, 5, 10, 20, 0.05, 20, 15, 1.0);
             break;
-
+        }
         case 4332:
             splash("Odor", "Control");
             laserTrialType = LASER_OTHER_TRIAL;
             int m = getFuncNumber(1, "1st 2nd BothOdor");
-            zxLaserSessions(setType(), m == 1 ? laserDuring1stOdor : m == 2 ? laserDuring2ndOdor : laserDuringOdor, 5, 10, 20, 0.05, 50, 30, 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, m == 1 ? laserDuring1stOdor : m == 2 ? laserDuring2ndOdor : laserDuringOdor, 5, 10, 20, 0.05, 50, 30, 1.0);
             break;
         case 4333:
             test_Laser();
@@ -1900,7 +1949,7 @@ void callFunction(int n) {
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
-            zxLaserSessions(3, laserRampDuringDelay, 12, 24, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, 12, 24, 20, 0.05, 30, 20, 1.0);
             break;
 
 
@@ -1909,7 +1958,7 @@ void callFunction(int n) {
             protectedSerialSend(PERM_INFO, DMS_LR_1Odor_Laser);
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
-            zxLaserSessions(3, laserDuring1stOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuring1stOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4336:
@@ -1917,7 +1966,7 @@ void callFunction(int n) {
             protectedSerialSend(PERM_INFO, DMS_LR_2Odor_Laser);
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
-            zxLaserSessions(3, laserDuring2ndOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuring2ndOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4337:
@@ -1925,7 +1974,7 @@ void callFunction(int n) {
             protectedSerialSend(PERM_INFO, DMS_LR_bothOdor_Laser);
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
-            zxLaserSessions(3, laserDuringOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuringOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4338:
@@ -1933,7 +1982,7 @@ void callFunction(int n) {
             protectedSerialSend(PERM_INFO, DMS_LR_baseline_Laser);
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
-            zxLaserSessions(3, laserDuringBaseline, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuringBaseline, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4339:
@@ -1941,7 +1990,7 @@ void callFunction(int n) {
             protectedSerialSend(PERM_INFO, DMS_LR_response_Laser);
             taskType = DNMS_LR_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
-            zxLaserSessions(3, laserDuringResponseDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuringResponseDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
 
         case 4340:
@@ -1951,7 +2000,7 @@ void callFunction(int n) {
             splash("LR LASER DNMS", "Sufficiency");
             int delay = setDelay(1);
             laserTrialType = LASER_LR_EVERY_OTHER_TRIAL;
-            zxLaserSessions(3, laserRampDuringDelay, delay, delay * 2, 20, 0.05, 20, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserRampDuringDelay, delay, delay * 2, 20, 0.05, 20, setSessionNum(), 1.0);
             break;
         }
 
@@ -1959,14 +2008,14 @@ void callFunction(int n) {
             //            splash("DNMS Shaping", "");
             //            laserTrialType = _LASER_NO_TRIAL;
             //            taskType = _SHAPPING_TASK;
-            //            zxLaserSessions(3, laserDuringDelay, 4, 8, 20, 0.5, 50, 20, 1.0);
+            //            zxLaserSessions(5,6, laserDuringDelay, 4, 8, 20, 0.5, 50, 20, 1.0);
             //            break;
 
             //        case 4335:
             //        {
             //            splash("DNMS 4s", "DC laser,");
             //            taskType = _DNMS_TASK;
-            //            zxLaserSessions(3, laserDuringDelay, 4, 8, 20, 0.5, 50, setSessionNum(), 1.0);
+            //            zxLaserSessions(5,6, laserDuringDelay, 4, 8, 20, 0.5, 50, setSessionNum(), 1.0);
             //            break;
             //        }
 
@@ -1974,7 +2023,7 @@ void callFunction(int n) {
             splash("DNMS 5s Shaping", "RQ");
             laserTrialType = LASER_NO_TRIAL;
             taskType = SHAPPING_TASK;
-            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.05, 50, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserDuringDelayChR2, 5, 10, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
 
             //        case 4342:
@@ -1982,7 +2031,7 @@ void callFunction(int n) {
             //            splash("DNMS 5s Water+", "RQ DC laser");
             //            laserTrialType = _LASER_EVERY_TRIAL;
             //            taskType = _DNMS_TASK;
-            //            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.1, 50, setSessionNum(), 1.0);
+            //            zxLaserSessions(5,6, laserDuringDelayChR2, 5, 10, 20, 0.1, 50, setSessionNum(), 1.0);
             //            break;
             //        }
         case 4343:
@@ -1990,7 +2039,7 @@ void callFunction(int n) {
             splash("DNMS 5s ++", "RQ DC laser");
             laserTrialType = LASER_EVERY_TRIAL;
             taskType = DNMS_TASK;
-            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.05, 50, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserDuringDelayChR2, 5, 10, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
         }
         case 4344:
@@ -1998,7 +2047,7 @@ void callFunction(int n) {
             splash("DNMS 5s", "RQ NoLaser");
             laserTrialType = LASER_NO_TRIAL;
             taskType = DNMS_TASK;
-            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.05, 50, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserDuringDelayChR2, 5, 10, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
         }
 
@@ -2007,7 +2056,7 @@ void callFunction(int n) {
             splash("DNMS 8s ++", "RQ DC laser");
             laserTrialType = LASER_EVERY_TRIAL;
             taskType = DNMS_TASK;
-            zxLaserSessions(3, laserDuringDelayChR2, 8, 16, 20, 0.05, 50, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserDuringDelayChR2, 8, 16, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
         }
 
@@ -2031,7 +2080,7 @@ void callFunction(int n) {
             splash("DNMS 5s +-", "RQ DC laser");
             laserTrialType = LASER_OTHER_TRIAL;
             taskType = DNMS_TASK;
-            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.05, 50, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserDuringDelayChR2, 5, 10, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
         }
 
@@ -2044,7 +2093,7 @@ void callFunction(int n) {
             splash("DNMS 8s +-", "RQ DC laser");
             laserTrialType = LASER_OTHER_TRIAL;
             taskType = DNMS_TASK;
-            zxLaserSessions(3, laserDuringDelayChR2, 8, 16, 20, 0.05, 50, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserDuringDelayChR2, 8, 16, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
         }
         case 4356:
@@ -2067,7 +2116,7 @@ void callFunction(int n) {
         case 4411:
             splash("During Delay", "");
             //            setLaser();
-            zxLaserSessions(0, laserDuringDelay, 4, 8, 20, 0.05, 50, setSessionNum(), 1.0);
+            zxLaserSessions(2, 3, laserDuringDelay, 4, 8, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
 
 
@@ -2078,7 +2127,8 @@ void callFunction(int n) {
             laserTrialType = LASER_NO_TRIAL;
             taskType = SHAPPING_TASK;
             int delay = setDelay(2);
-            zxLaserSessions(setType(), laserDuringDelay, delay, delay * 2, 20, 0.05, 50, 40, 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay, delay, delay * 2, 20, 0.05, 50, 40, 1.0);
             break;
         }
 
@@ -2088,14 +2138,14 @@ void callFunction(int n) {
             splash("DNMS LR Distra.", "Laser EveryTrial");
             taskType = DNMS_LR_TASK;
             laserTrialType = LASER_EVERY_TRIAL;
-            zxLaserSessions(3, laserDelayDistractor, 5, 10, 20, 0.05, 200, 10, 1.0);
+            zxLaserSessions(5, 6, laserDelayDistractor, 5, 10, 20, 0.05, 200, 10, 1.0);
             break;
         }
         case 4414:
         {
             splash("Varying Delay", "DC laser,");
             taskType = DNMS_TASK;
-            zxLaserSessions(3, laserDuringDelay, 4, 8, 20, 0.125, 50, 5, 1.0);
+            zxLaserSessions(5, 6, laserDuringDelay, 4, 8, 20, 0.125, 50, 5, 1.0);
             break;
         }
         case 4415:
@@ -2104,7 +2154,8 @@ void callFunction(int n) {
             int delay = setDelay(1);
             taskType = DNMS_TASK;
             laserTrialType = setLaser();
-            zxLaserSessions(setType(), laserDuringDelayChR2, delay, delay * 2, 20, 0.05, 50, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelayChR2, delay, delay * 2, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
         }
 
@@ -2115,17 +2166,19 @@ void callFunction(int n) {
             int delay = setDelay(1);
             taskType = DNMS_TASK;
             laserTrialType = setLaser();
-            zxLaserSessions(3, laserDuringDelayChR2, delay, delay * 2, 20, 0.036, 50, setSessionNum(), 1.0);
+            zxLaserSessions(5, 6, laserDuringDelayChR2, delay, delay * 2, 20, 0.036, 50, setSessionNum(), 1.0);
             break;
         }
 
         case 4417:
+        {
             splash("DNMS Shaping", "");
             laserTrialType = LASER_NO_TRIAL;
             taskType = SHAPPING_TASK;
-            zxLaserSessions(setType(), laserDuringDelay, 4, 8, 20, 0.036, 50, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay, 4, 8, 20, 0.036, 50, setSessionNum(), 1.0);
             break;
-
+        }
         case 4418:
             splash("Feed Water", "");
             feedWaterFast(36);
@@ -2137,17 +2190,23 @@ void callFunction(int n) {
             break;
 
         case 4421:
+        {
             splash("DNMS Shaping", "");
             laserTrialType = LASER_NO_TRIAL;
             taskType = SHAPPING_TASK;
-            zxLaserSessions(setType(), laserDuringDelay, 4, 8, 20, 0.05, 50, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay, 4, 8, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
+        }
         case 4422:
+        {
             splash("DNMS Shaping", "Long Water");
             laserTrialType = LASER_NO_TRIAL;
             taskType = SHAPPING_TASK;
-            zxLaserSessions(setType(), laserDuringDelay, 4, 8, 20, 0.1, 50, 40, 0.5);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay, 4, 8, 20, 0.1, 50, 40, 0.5);
             break;
+        }
         case 4423:
             testValve();
             break;
@@ -2158,10 +2217,12 @@ void callFunction(int n) {
 
 
         case 4425:
+        {
             splash("Learning", "DC laser");
-            zxLaserSessions(setType(), laserDuringDelay, 4, 8, 20, 0.05, 60, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay, 4, 8, 20, 0.05, 60, setSessionNum(), 1.0);
             break;
-
+        }
             //        case 4426:
             //            shiftingLaser();
             //            break;
@@ -2171,7 +2232,8 @@ void callFunction(int n) {
             splash("VarDelay LR", "DC laser");
             int delay = setDelay(1);
             taskType = DNMS_LR_TASK;
-            zxLaserSessions(setType(), laserDuringDelay, delay, delay * 2, 20, 0.05, 50, setSessionNum(), 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuringDelay, delay, delay * 2, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
         }
         case 4432:
@@ -2193,7 +2255,8 @@ void callFunction(int n) {
                     laserPeriod = laserDuringResponseDelay;
                     break;
             }
-            zxLaserSessions(setType(), laserPeriod, 0, 5, 20, 0.05, 50, 30, 1.0);
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserPeriod, 0, 5, 20, 0.05, 50, 30, 1.0);
             break;
         }
 
@@ -2202,7 +2265,7 @@ void callFunction(int n) {
             splash("DNMS LR", "Laser EveryTrial");
             taskType = DNMS_LR_TASK;
             laserTrialType = LASER_EVERY_TRIAL;
-            zxLaserSessions(3, laserDuringDelayChR2, 5, 10, 20, 0.05, 200, 10, 1.0);
+            zxLaserSessions(5, 6, laserDuringDelayChR2, 5, 10, 20, 0.05, 200, 10, 1.0);
             break;
         }
 
@@ -2214,7 +2277,7 @@ void callFunction(int n) {
         {
             splash("Baseline LR", "Laser EveryTrial");
             taskType = DNMS_LR_TASK;
-            zxLaserSessions(3, laserDuring3Baseline, 5, 10, 20, 0.05, 200, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuring3Baseline, 5, 10, 20, 0.05, 200, 20, 1.0);
             break;
         }
 
@@ -2223,7 +2286,7 @@ void callFunction(int n) {
             //            splash("DNMS LR", "Laser EveryTrial");
             //            taskType = _DNMS_LR_TASK;
             //            laserTrialType = _LASER_EVERY_TRIAL;
-            //            zxLaserSessions(3, laserDelayDistractor, 5, 10, 20, 0.05, 200, 10, 1.0);
+            //            zxLaserSessions(5,6, laserDelayDistractor, 5, 10, 20, 0.05, 200, 10, 1.0);
             //            break;
             //        }
 
@@ -2231,21 +2294,21 @@ void callFunction(int n) {
         {
             splash("First Odor LR", "Laser EveryTrial");
             taskType = DNMS_LR_TASK;
-            zxLaserSessions(3, laserDuring1stOdor, 5, 10, 20, 0.05, 200, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuring1stOdor, 5, 10, 20, 0.05, 200, 20, 1.0);
             break;
         }
         case 4442:
         {
             splash("Second Odor LR", "Laser EveryTrial");
             taskType = DNMS_LR_TASK;
-            zxLaserSessions(3, laserDuring2ndOdor, 5, 10, 20, 0.05, 200, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuring2ndOdor, 5, 10, 20, 0.05, 200, 20, 1.0);
             break;
         }
         case 4443:
         {
             splash("Response Delay LR", "Laser EveryTrial");
             taskType = DNMS_LR_TASK;
-            zxLaserSessions(3, laserDuringResponseDelay, 5, 10, 20, 0.05, 200, 20, 1.0);
+            zxLaserSessions(5, 6, laserDuringResponseDelay, 5, 10, 20, 0.05, 200, 20, 1.0);
             break;
         }
 
@@ -2253,6 +2316,15 @@ void callFunction(int n) {
         case 4445:
             feedWaterLR(50);
             break;
+
+        case 4446:
+        {
+            int f = getFuncNumberMarquee(3, "0123456798ABCDEFGHIJKLMN", 24);
+            home_clr();
+            lcdWriteNumber(f, 4, 1, 1);
+            while (1);
+        }
+
     }
 }
 

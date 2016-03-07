@@ -61,6 +61,7 @@ extern void _eedata_helper1(_prog_addressT dst, int len);
 extern void _eedata_helper3(_prog_addressT dst, int dat);
 extern _prog_addressT _memcpy_helper(_prog_addressT src, void *dst,
         unsigned int len, int flags);
+extern void safe_wait_ms(int duration);
 
 
 typedef unsigned int _delayT;
@@ -193,6 +194,7 @@ typedef unsigned int _delayT;
 #define GONOGO_LR_TASK 50
 #define NO_ODOR_CATCH_TRIAL_TASK 60
 #define VARY_ODOR_LENGTH_TASK 70
+#define OPTO_DPAL_TASK 80
 
 
 #define EEP_DUTY_LOW_L_OFFSET 0

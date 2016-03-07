@@ -400,6 +400,8 @@ void Valve_ON(unsigned int N, unsigned int rate) {
         case 8: PORTCbits.RC1 = 1;
             PDC4 = rate;
             break;
+        default:
+            break;
     }
 }
 
