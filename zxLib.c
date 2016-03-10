@@ -1,24 +1,27 @@
 #include "commons.h"
+#include "limits.h"
 #include "zxLib.h"
 
 //DEBUG
 
 
-STIM_T stims = {.stim1Length = 1000u, .stim2Length = 1000u, .distractorLength = 1000u};
-LASER_T laser = {.timer = 0, .onTime = 65535u, .offTime = 0, .ramp = 0, .ramping = 0, .on = 0, .side = 3u};
+STIM_T stims = {.stim1Length = 1000, .stim2Length = 1000, .distractorLength = 1000};
+LASER_T laser = {.timer = 0, .onTime = 65535u, .offTime = 0, .ramp = 0, .ramping = 0, .on = 0, .side = 3};
 PWM_T pwm = {.L_Hi = 0xfe, .R_Hi = 0xfe, .L_Lo = 0, .R_Lo = 0, .fullDuty = 0xfe};
 LICK_T lick = {.current = 0, .filter = 0, .flag = 0, .LCount = 0, .RCount = 0};
 const char odorTypes[] = " WBJlRQMN0123456789012345678901234567890123456789";
 unsigned int laserTrialType = LASER_EVERY_TRIAL;
 unsigned int taskType = DNMS_TASK;
 unsigned int wait_Trial = 1u;
-unsigned int timeSum = 0u;
+unsigned long timeSum = 0u;
+unsigned long timerCounter32;
 
 unsigned int highLevelShuffleLength = 12u;
 
 const _prog_addressT EE_Addr = 0x7ff000;
 
 static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdorDelay, int secondOdor, float waterPeroid, int ITI, float delay_before_reward, int laserOnTrial);
+unsigned int getFuncNumberMarquee(int targetDigits, char input[], int l);
 
 char * getVer(void) {
     static char ver[16] = {'Z', 'X', ' '};
@@ -41,7 +44,8 @@ void initZXTMR(void) {
     IEC0bits.T2IE = 0;
     IFS0bits.T2IF = 0;
     timerCounterI = 0;
-    timerCounterJ = 0;
+//    timerCounterJ = 0;
+    timerCounter32 = 0;
     //
 
     TMR1 = 0;
@@ -56,32 +60,41 @@ void initZXTMR(void) {
 }
 
 inline int filtered(void) {
-    return (timerCounterJ < lick.filter || timerCounterJ > lick.filter + 50u);
+//    return (timerCounterJ < lick.filter || timerCounterJ > lick.filter + 50u);
+    return (timerCounter32 < lick.filter || timerCounter32 > lick.filter + 50u);
 }
 
 inline void tick(int i) {
     laser.timer += i;
     timerCounterI += i;
-    if (timerCounterJ == 65535) {
-        timerCounterJ = 0;
+//    if (timerCounterJ == 65535) {
+//        timerCounterJ = 0;
+//    } else {
+//        timerCounterJ += i;
+//    }
+    if (timerCounter32 == LONG_MAX) {
+        timerCounter32 = 0;
     } else {
-        timerCounterJ += i;
+        timerCounter32 += i;
     }
 }
 
-static void resetTimerCounterJ() {
-    timerCounterJ = 65535;
+static void resetTimerCounter32() {
+//    timerCounterJ = 65535;
+//    timeSum = 0;
+//    while (timerCounterJ > 1);
+    timerCounter32 = LONG_MAX;
     timeSum = 0;
-    while (timerCounterJ > 1);
+    while (timerCounter32 > 1);
 }
 
-static void waitJ(unsigned int dT) {
+static void waitTimer32(unsigned int dT) {
     timeSum += dT;
-    while (timerCounterJ < timeSum);
+    while (timerCounter32 < timeSum);
 }
 
-static int likeOdorA(int odor) {
-    if (odor == 2 || odor == 5 || odor == 7 || odor == 22) return 1;
+static int isLikeOdorA(int odor) {
+    if (odor == 2 || odor == 5 || odor == 7 || odor == 9) return 1;
     return 0;
 }
 
@@ -134,7 +147,8 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         Out6 = 1;
         lick.current = LICKING_BOTH;
     } else if (LICK_LEFT && lick.current != LICKING_LEFT && filtered()) {
-        lick.filter = timerCounterJ;
+//        lick.filter = timerCounterJ;
+        lick.filter = timerCounter32;
         lick.current = LICKING_LEFT;
         Out1 = 1;
         lick.LCount++;
@@ -142,7 +156,8 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         localSendOnce(SpLick, taskType < 35 ? 1 : 2);
         //        tick(3);
     } else if (LICK_RIGHT && lick.current != LICKING_RIGHT && filtered()) {
-        lick.filter = timerCounterJ;
+//        lick.filter = timerCounterJ;
+        lick.filter = timerCounter32;
         lick.current = LICKING_RIGHT;
         Out6 = 1;
         lick.RCount++;
@@ -165,8 +180,8 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
 
 static int setType(void) {
 
-    int ports[] = {0, 2, 5, 7, 20, 22};
-    return ports[getFuncNumber(1, "23 56 78 OB1 OB2")];
+    int ports[] = {0, 2, 5, 7};
+    return ports[getFuncNumber(1, "23 56 78")];
 }
 
 static int setSessionNum() {
@@ -177,9 +192,9 @@ static int setSessionNum() {
 
 static int setDelay(int type) {
     if (type == 1) {
-        int d[] = {5, 4, 5, 8, 12, 16, 20};
-        int n = getFuncNumber(1, "4 5 8 12 16 20");
-        if (n > 0 && n < 7)
+        int d[] = {0, 4, 5, 8, 12, 16, 20, 30, 40};
+        unsigned int n = getFuncNumberMarquee(1, "0:0s 1:4s 2:5s 3:8s 4:12s 5:16s 6:20s 7:30s 8:40s ", 50);
+        if (n > 0 && n < sizeof (d))
             return d[n];
         else return 5;
     }
@@ -309,7 +324,7 @@ static void assertLaser(int type, int step, int currentTrial) {
                 break;
             case laserDuring1stOdor:
                 if (step == atFirstOdorBeginning) {
-                    turnOnLaser(3);
+                    turnOnLaser(laser.side);
                 } else if (step == atFirstOdorEnd) {
                     turnOffLaser();
                 }
@@ -517,7 +532,7 @@ void lcdWriteString(char s[]) {
 
 int lcdMarqueeString(char s[], int l) {
     static unsigned int last;
-    int startIdx = (timerCounterJ >> 9) % l;
+    int startIdx = (timerCounter32 >> 9) % l;
     if (startIdx != last) {
         last = startIdx;
         home_clr();
@@ -669,6 +684,8 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
              */
         case DNMS_TASK:
         case SHAPPING_TASK:
+        case OPTO_DPAL_TASK:
+        case OPTO_DPAL_SHAPING_TASK:
         case NO_ODOR_CATCH_TRIAL_TASK:
         case VARY_ODOR_LENGTH_TASK:
 
@@ -680,7 +697,7 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
 
             /////Reward
             if (!lick.flag) {
-                if (likeOdorA(firstOdor) == likeOdorA(secondOdor)) {
+                if (isLikeOdorA(firstOdor) == isLikeOdorA(secondOdor)) {
                     protectedSerialSend(SpCorrectRejection, 1);
                     lcdWriteNumber(++correctRejection, 3, 10, 2);
                 } else {
@@ -693,7 +710,7 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                         Valve_OFF(water_sweet);
                     }
                 }
-            } else if (likeOdorA(firstOdor) == likeOdorA(secondOdor)) {
+            } else if (isLikeOdorA(firstOdor) == isLikeOdorA(secondOdor)) {
                 processFalse(1);
             } else {
                 processHit(waterPeroid, 1, 1);
@@ -703,7 +720,7 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
             /*
              *DNMS-LR
              */
-        case DNMS_LR_TASK:
+        case DNMS_2AFC_TASK:
             //
             ///////////Detect/////////////////
             for (timerCounterI = 0; timerCounterI < 500 && !(lick.flag == 2 || lick.flag == 3); lick.flag = lick.current);
@@ -717,7 +734,7 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
             }
             break;
 
-        case DNMS_LR_TEACH:
+        case DNMS_2AFC_TEACH:
             //
             ///////////Detect/////////////////
             for (timerCounterI = 0; timerCounterI < 500 && !(lick.flag == 2 || lick.flag == 3); lick.flag = lick.current);
@@ -734,20 +751,20 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
             break;
 
         case GONOGO_LR_TASK:
-        case GONOGO_LR_TEACH:
+        case GONOGO_2AFC_TEACH:
             //
             ///////////Detect/////////////////
             for (timerCounterI = 0; timerCounterI < 500 && !(lick.flag == 2 || lick.flag == 3); lick.flag = lick.current);
 
             /////Reward
-            if (lick.flag == LICKING_LEFT && likeOdorA(firstOdor)) {
+            if (lick.flag == LICKING_LEFT && isLikeOdorA(firstOdor)) {
                 processHit(waterPeroid, 1, 2);
-            } else if (lick.flag == LICKING_RIGHT && !likeOdorA(firstOdor)) {
+            } else if (lick.flag == LICKING_RIGHT && !isLikeOdorA(firstOdor)) {
                 processHit(waterPeroid, 3, 3);
             } else if (lick.flag) {
                 processFalse(lick.flag == LICKING_LEFT ? 2 : 3);
             } else {
-                processMiss(likeOdorA(firstOdor) ? 2 : 3);
+                processMiss(isLikeOdorA(firstOdor) ? 2 : 3);
             }
             break;
 
@@ -757,13 +774,13 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
 
             /////Reward
             if (!lick.flag) {
-                if (!likeOdorA(firstOdor)) {
+                if (!isLikeOdorA(firstOdor)) {
                     protectedSerialSend(SpCorrectRejection, 1);
                     lcdWriteNumber(++correctRejection, 3, 10, 2);
                 } else {
                     processMiss(1);
                 }
-            } else if (!likeOdorA(firstOdor)) {
+            } else if (!isLikeOdorA(firstOdor)) {
                 processFalse(1);
             } else {
                 processHit(waterPeroid, 1, 1);
@@ -838,8 +855,8 @@ static void zxLaserSessions(int stim1, int stim2, int laserType, _delayT delay, 
                         firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
                         secondOdor = 0;
                         break;
-                    case DNMS_LR_TASK:
-                    case DNMS_LR_TEACH:
+                    case DNMS_2AFC_TASK:
+                    case DNMS_2AFC_TEACH:
                         if (hit > lastHit || currentTrial == 0) {
                             firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
                             secondOdor = (index == 1 || index == 2) ? stim1 : stim2;
@@ -852,7 +869,7 @@ static void zxLaserSessions(int stim1, int stim2, int laserType, _delayT delay, 
 
                         lastHit = hit;
                         break;
-                    case GONOGO_LR_TEACH:
+                    case GONOGO_2AFC_TEACH:
                         if (hit > lastHit || currentTrial == 0) {
                             firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
                             lastOdor1 = firstOdor;
@@ -892,17 +909,22 @@ static void zxLaserSessions(int stim1, int stim2, int laserType, _delayT delay, 
 
                         break;
                     }
-
                     case OPTO_DPAL_TASK:
-                        firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
+                        firstOdor = (index == 0 || index == 2) ? 9 : 10;
                         secondOdor = (index == 1 || index == 2) ? stim1 : stim2;
+                        break;
 
+                    case OPTO_DPAL_SHAPING_TASK:
+                        firstOdor = (index == 0 || index == 2) ? 9 : 10;
+                        secondOdor = (firstOdor == 9) ? stim2 : stim1;
+                        break;
                 }
 
                 lcdWriteChar(odorTypes[firstOdor], 1, 1);
                 lcdWriteChar(odorTypes[secondOdor], 2, 1);
 
                 int laserCurrentTrial;
+
                 switch (laserTrialType) {
                     case LASER_NO_TRIAL:
                         laserCurrentTrial = 0;
@@ -915,7 +937,7 @@ static void zxLaserSessions(int stim1, int stim2, int laserType, _delayT delay, 
                         break;
 
                     case LASER_LR_EACH_QUARTER:
-                        laser.side = likeOdorA(firstOdor) ? 1 : 2;
+                        laser.side = isLikeOdorA(firstOdor) ? 1 : 2;
                     case LASER_EACH_QUARTER:
                         switch (currentTrial % 5) {
                             case 0:
@@ -942,7 +964,7 @@ static void zxLaserSessions(int stim1, int stim2, int laserType, _delayT delay, 
 
 
                     case LASER_12s_LR_EACH_QUARTER:
-                        laser.side = likeOdorA(firstOdor) ? 1 : 2;
+                        laser.side = isLikeOdorA(firstOdor) ? 1 : 2;
                     case LASER_12s_EACH_QUARTER:
                         switch (currentTrial % 5) {
                             case 0:
@@ -994,23 +1016,23 @@ static void zxLaserSessions(int stim1, int stim2, int laserType, _delayT delay, 
 
 
                     case LASER_LR_EVERYTRIAL:
-                        laser.side = likeOdorA(firstOdor) ? 1 : 2;
+                        laser.side = isLikeOdorA(firstOdor) ? 1 : 2;
                         laserCurrentTrial = 1;
                         break;
 
                     case LASER_LR_EVERY_OTHER_TRIAL:
-                        laser.side = likeOdorA(firstOdor) ? 1 : 2;
+                        laser.side = isLikeOdorA(firstOdor) ? 1 : 2;
                         laserCurrentTrial = currentTrial % 2;
                         break;
 
                     case LASER_INCONGRUENT_CATCH_TRIAL:
-                        if ((currentTrial > 3 && currentTrial < 8 && likeOdorA(firstOdor) && likeOdorA(secondOdor))
-                                || (currentTrial > 7 && currentTrial < 12 && likeOdorA(firstOdor)&& !likeOdorA(secondOdor))
-                                || (currentTrial > 11 && currentTrial < 16 && !likeOdorA(firstOdor) && likeOdorA(secondOdor))
-                                || (currentTrial > 15 && currentTrial < 20 && !likeOdorA(firstOdor) && !likeOdorA(secondOdor))) {
-                            laser.side = likeOdorA(firstOdor) ? 2 : 1;
+                        if ((currentTrial > 3 && currentTrial < 8 && isLikeOdorA(firstOdor) && isLikeOdorA(secondOdor))
+                                || (currentTrial > 7 && currentTrial < 12 && isLikeOdorA(firstOdor)&& !isLikeOdorA(secondOdor))
+                                || (currentTrial > 11 && currentTrial < 16 && !isLikeOdorA(firstOdor) && isLikeOdorA(secondOdor))
+                                || (currentTrial > 15 && currentTrial < 20 && !isLikeOdorA(firstOdor) && !isLikeOdorA(secondOdor))) {
+                            laser.side = isLikeOdorA(firstOdor) ? 2 : 1;
                         } else {
-                            laser.side = likeOdorA(firstOdor) ? 1 : 2;
+                            laser.side = isLikeOdorA(firstOdor) ? 1 : 2;
                         }
                         laserCurrentTrial = 1;
                         break;
@@ -1026,55 +1048,55 @@ static void zxLaserSessions(int stim1, int stim2, int laserType, _delayT delay, 
     u2Received = -1;
 }
 
-static void optoStim(int stim, int length, int place) {
-    int stimSend = likeOdorA(stim) ? 9 : 10;
-    protectedSerialSend(stimSend, stim);
-    lcdWriteChar(place == 1 ? '1' : '2', 4, 1);
-    switch (stim) {
-        case 21:
-        {
-            int timePassed = 0;
-            while (timePassed < length) {
-                Out3 = 1;
-                wait_ms(85); //Uchida N.NS 2013
-                Out3 = 0;
-                wait_ms(85);
-                Out3 = 1;
-                wait_ms(85); //Uchida N.NS 2013
-                Out3 = 0;
-                wait_ms(245);
-                timePassed += 500;
-            }
-            break;
-        }
-        case 22:
-        {
-            int timePassed = 0;
-            while (timePassed < length) {
-                Out3 = 1;
-                wait_ms(85); //Uchida N.NS 2013
-                Out3 = 0;
-                wait_ms(165);
-                timePassed += 250;
-            }
-            break;
-        }
-        case 23:
-        {
-            int timePassed = 0;
-            while (timePassed < length) {
-                Out3 = 1;
-                wait_ms(170); //Uchida N.NS 2013
-                Out3 = 0;
-                wait_ms(330);
-                timePassed += 500;
-            }
-            break;
-        }
-    }
-    protectedSerialSend(stimSend, 0);
-    lcdWriteChar(place == 1 ? 'd' : 'D', 4, 1);
-}
+//static void optoStim(int stim, int length, int place) {
+//    int stimSend = likeOdorA(stim) ? 9 : 10;
+//    protectedSerialSend(stimSend, stim);
+//    lcdWriteChar(place == 1 ? '1' : '2', 4, 1);
+//    switch (stim) {
+//        case 21:
+//        {
+//            int timePassed = 0;
+//            while (timePassed < length) {
+//                Out3 = 1;
+//                wait_ms(85); //Uchida N.NS 2013
+//                Out3 = 0;
+//                wait_ms(85);
+//                Out3 = 1;
+//                wait_ms(85); //Uchida N.NS 2013
+//                Out3 = 0;
+//                wait_ms(245);
+//                timePassed += 500;
+//            }
+//            break;
+//        }
+//        case 22:
+//        {
+//            int timePassed = 0;
+//            while (timePassed < length) {
+//                Out3 = 1;
+//                wait_ms(85); //Uchida N.NS 2013
+//                Out3 = 0;
+//                wait_ms(165);
+//                timePassed += 250;
+//            }
+//            break;
+//        }
+//        case 23:
+//        {
+//            int timePassed = 0;
+//            while (timePassed < length) {
+//                Out3 = 1;
+//                wait_ms(170); //Uchida N.NS 2013
+//                Out3 = 0;
+//                wait_ms(330);
+//                timePassed += 500;
+//            }
+//            break;
+//        }
+//    }
+//    protectedSerialSend(stimSend, 0);
+//    lcdWriteChar(place == 1 ? 'd' : 'D', 4, 1);
+//}
 
 static void stim(int place, int stim, int type, int laserOnTrial) {
     switch (stim) {
@@ -1085,9 +1107,12 @@ static void stim(int place, int stim, int type, int laserOnTrial) {
         case 6:
         case 7:
         case 8:
+        case 9:
+        case 10:
+            assertLaser(type, place == 1 ? atFirstOdorBeginning : atSecondOdorBeginning, laserOnTrial);
             Valve_ON(stim, pwm.fullDuty);
             int stimSend;
-            if (likeOdorA(stim)) {
+            if (isLikeOdorA(stim)) {
                 stimSend = 9;
                 Out2 = 1;
             } else {
@@ -1096,7 +1121,7 @@ static void stim(int place, int stim, int type, int laserOnTrial) {
             }
             protectedSerialSend(stimSend, stim);
             lcdWriteChar(place == 1 ? '1' : '2', 4, 1);
-            waitJ(place == 1 ? stims.stim1Length : stims.stim2Length);
+            waitTimer32(place == 1 ? stims.stim1Length : stims.stim2Length);
             Valve_OFF(stim);
             Out2 = 0;
             Nop();
@@ -1107,7 +1132,7 @@ static void stim(int place, int stim, int type, int laserOnTrial) {
             assertLaser(type, place == 1 ? atFirstOdorEnd : atSecondOdorEnd, laserOnTrial);
             protectedSerialSend(stimSend, 0);
             lcdWriteChar(place == 1 ? 'd' : 'D', 4, 1);
-            waitJ(1000 - (place == 1 ? stims.stim1Length : stims.stim2Length));
+            waitTimer32(1000 - (place == 1 ? stims.stim1Length : stims.stim2Length));
             break;
             //        case 20:
             //        case 21:
@@ -1115,106 +1140,104 @@ static void stim(int place, int stim, int type, int laserOnTrial) {
             //        case 23:
             //            optoStim(stim, place == 1 ? stims.stim1Length : stims.stim2Length, place);
             //            break;
-        case 10:
-            break;
+
 
     }
 }
 
 static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdorDelay, int secondOdor, float waterPeroid, int ITI, float delay_before_reward, int laserOnTrial) {
-    resetTimerCounterJ();
+    resetTimerCounter32();
     protectedSerialSend(Sptrialtype, type);
     protectedSerialSend(Splaser, laserOnTrial);
     assertLaser(type, fourSecBeforeFirstOdor, laserOnTrial);
-    waitJ(1000);
+    waitTimer32(1000);
     assertLaser(type, threeSecBeforeFirstOdor, laserOnTrial);
-    waitJ(2000);
+    waitTimer32(2000);
     assertLaser(type, oneSecBeforeFirstOdor, laserOnTrial);
-    waitJ(800);
+    waitTimer32(800);
     assertLaser(type, at200mSBeforeFirstOdor, laserOnTrial);
-    waitJ(200);
-    assertLaser(type, atFirstOdorBeginning, laserOnTrial);
+    waitTimer32(200);
+
     /////////////////////////////////////////////////
     stim(1, firstOdor, type, laserOnTrial);
     ////////////////////////////////////////////////
-    if (interOdorDelay == 0) {
-        waitJ(200);
-    } else {
-        ///////////-inter odor interval-/////////////////
-        assertLaser(type, atDelayBegin, laserOnTrial);
-        waitJ(500);
-        assertLaser(type, atDelay_5SecIn, laserOnTrial);
-        waitJ(500);
-        assertLaser(type, atDelay1SecIn, laserOnTrial);
 
-        if (interOdorDelay < 4) {
-            waitJ(interOdorDelay * 1000 - 2000);
-        } else {
-            //TODO INSERT DISTRACTOR HERE
-            if (type == laserDelayDistractor) {
-                distractor(2);
-            } else {
-                waitJ(500);
-                assertLaser(type, atDelay1_5SecIn, laserOnTrial);
-                waitJ(500);
-            }
-            assertLaser(type, atDelay2SecIn, laserOnTrial);
-
-            if (interOdorDelay == 12) {
-                waitJ(500);
-                assertLaser(type, atDelay2_5SecIn, laserOnTrial);
-                waitJ(500);
-                assertLaser(type, atDelay3SecIn, laserOnTrial);
-                waitJ(2500);
-            } else {
-                waitJ(interOdorDelay * 500 - 2500);
-            }
-
-            assertLaser(type, atDelay_5ToMiddle, laserOnTrial);
-            waitJ(500);
-            assertLaser(type, atDelayMiddle, laserOnTrial);
-            if (interOdorDelay == 12) {
-                waitJ(2500);
-                assertLaser(type, atDelay8_5SecIn, laserOnTrial);
-                waitJ(500);
-                assertLaser(type, atDelay9SecIn, laserOnTrial);
-                waitJ(500);
-            } else {
-                waitJ(interOdorDelay * 500 - 2500);
-            }
-            assertLaser(type, atDelayLast2_5SecBegin, laserOnTrial);
-            waitJ(500);
-            assertLaser(type, atDelayLast2SecBegin, laserOnTrial);
-            waitJ(500);
-            assertLaser(type, atDelayLast1_5SecBegin, laserOnTrial);
-            waitJ(500);
-        }
-        assertLaser(type, atDelayLastSecBegin, laserOnTrial);
-        waitJ(500);
-        assertLaser(type, atDelayLast500mSBegin, laserOnTrial);
-        waitJ(300);
-        assertLaser(type, atDelayLast200mSBegin, laserOnTrial);
-        waitJ(200);
-    }
-
-
-    assertLaser(type, atSecondOdorBeginning, laserOnTrial);
-    if (taskType == GONOGO_LR_TASK || taskType == GONOGO_TASK || taskType == GONOGO_LR_TEACH) {
+    if (taskType == GONOGO_LR_TASK || taskType == GONOGO_TASK || taskType == GONOGO_2AFC_TEACH) {
         //Do nothing during Go Nogo Tasks
         assertLaser(type, atSecondOdorEnd, laserOnTrial);
     } else {
+        if (interOdorDelay == 0) {
+            waitTimer32(200);
+        } else {
+            ///////////-inter odor interval-/////////////////
+            assertLaser(type, atDelayBegin, laserOnTrial);
+            waitTimer32(500);
+            assertLaser(type, atDelay_5SecIn, laserOnTrial);
+            waitTimer32(500);
+            assertLaser(type, atDelay1SecIn, laserOnTrial);
+
+            if (interOdorDelay < 4) {
+                waitTimer32(interOdorDelay * 1000 - 2000);
+            } else {
+                //TODO INSERT DISTRACTOR HERE
+                if (type == laserDelayDistractor) {
+                    distractor(2);
+                } else {
+                    waitTimer32(500);
+                    assertLaser(type, atDelay1_5SecIn, laserOnTrial);
+                    waitTimer32(500);
+                }
+                assertLaser(type, atDelay2SecIn, laserOnTrial);
+
+                if (interOdorDelay == 12) {
+                    waitTimer32(500);
+                    assertLaser(type, atDelay2_5SecIn, laserOnTrial);
+                    waitTimer32(500);
+                    assertLaser(type, atDelay3SecIn, laserOnTrial);
+                    waitTimer32(2500);
+                } else {
+                    waitTimer32(interOdorDelay * 500 - 2500);
+                }
+
+                assertLaser(type, atDelay_5ToMiddle, laserOnTrial);
+                waitTimer32(500);
+                assertLaser(type, atDelayMiddle, laserOnTrial);
+                if (interOdorDelay == 12) {
+                    waitTimer32(2500);
+                    assertLaser(type, atDelay8_5SecIn, laserOnTrial);
+                    waitTimer32(500);
+                    assertLaser(type, atDelay9SecIn, laserOnTrial);
+                    waitTimer32(500);
+                } else {
+                    waitTimer32(interOdorDelay * 500 - 2500);
+                }
+                assertLaser(type, atDelayLast2_5SecBegin, laserOnTrial);
+                waitTimer32(500);
+                assertLaser(type, atDelayLast2SecBegin, laserOnTrial);
+                waitTimer32(500);
+                assertLaser(type, atDelayLast1_5SecBegin, laserOnTrial);
+                waitTimer32(500);
+            }
+            assertLaser(type, atDelayLastSecBegin, laserOnTrial);
+            waitTimer32(500);
+            assertLaser(type, atDelayLast500mSBegin, laserOnTrial);
+            waitTimer32(300);
+            assertLaser(type, atDelayLast200mSBegin, laserOnTrial);
+            waitTimer32(200);
+        }
+
         ///////////-Second odor-/////////////////
         stim(2, secondOdor, type, laserOnTrial);
         //////////////////////////////////////////
     }
-    waitJ(delay_before_reward * 1000);
+    waitTimer32(delay_before_reward * 1000);
     assertLaser(type, atRewardBeginning, laserOnTrial);
     lcdWriteChar('R', 4, 1);
 
     //Assess Performance here
     waterNResult(firstOdor, secondOdor, waterPeroid);
 
-    waitJ(550); //water time sync
+    waitTimer32(550); //water time sync
 
     // Total Trials
     int totalTrials = hit + correctRejection + miss + falseAlarm;
@@ -1228,9 +1251,9 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
     lcdWriteChar('I', 4, 1);
     ///--ITI1---///
     assertLaser(type, atITIBeginning, laserOnTrial);
-    waitJ(1000);
+    waitTimer32(1000);
     assertLaser(type, atITIOneSecIn, laserOnTrial);
-    waitJ(ITI * 1000 - 5000); //another 4000 is at the beginning of the trials.
+    waitTimer32(ITI * 1000 - 5000); //another 4000 is at the beginning of the trials.
     protectedSerialSend(SpITI, 0);
     waitTrial();
 }
@@ -1624,11 +1647,11 @@ static void flashLaser(void) {
     int count = 0;
     while (1) {
         lcdWriteNumber(++count, 3, 10, 2);
-        resetTimerCounterJ();
+        resetTimerCounter32();
         turnOnLaser(3);
-        waitJ(2000);
+        waitTimer32(2000);
         turnOffLaser();
-        waitJ(5000);
+        waitTimer32(5000);
     }
 }
 
@@ -1749,6 +1772,27 @@ void callFunction(int n) {
             zxLaserSessions(type, type + 1, laserDuring3Baseline, 0, 5, 20, 0.05, 20, setSessionNum(), 1.0);
             break;
         }
+        case 4307:
+        {
+            splash("OB Opto Stim", "");
+            //            zxGoNogoSessions(type,type+1,3, 20, 1, 0.5, 4);
+            laserTrialType = LASER_LR_EVERYTRIAL;
+            taskType = OPTO_DPAL_TASK;
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuring1stOdor, 4, 8, 20, 0.05, 30, setSessionNum(), 1.0);
+            break;
+        }
+
+        case 4308:
+        {
+            splash("OB Opto Stim", "Shaping");
+            //            zxGoNogoSessions(type,type+1,3, 20, 1, 0.5, 4);
+            laserTrialType = LASER_LR_EVERYTRIAL;
+            taskType = OPTO_DPAL_SHAPING_TASK;
+            int type = setType();
+            zxLaserSessions(type, type + 1, laserDuring1stOdor, 4, 8, 20, 0.05, 30, setSessionNum(), 1.0);
+            break;
+        }
         case 4310:
         {
             int m = getFuncNumber(2, "Time in ms");
@@ -1860,7 +1904,7 @@ void callFunction(int n) {
         case 4323:
             splash("DNMS LR TASK", "Ramp Laser ++");
             protectedSerialSend(PERM_INFO, DMS_LR_Teach_LON);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_EVERY_TRIAL;
             laser.ramp = 500;
             zxLaserSessions(5, 6, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
@@ -1869,7 +1913,7 @@ void callFunction(int n) {
         case 4324:
             splash("DNMS LR TASK", "Ramp Laser +-");
             protectedSerialSend(PERM_INFO, DMS_LR_Teach_ONOFF);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
             zxLaserSessions(5, 6, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
@@ -1892,7 +1936,7 @@ void callFunction(int n) {
         case 4327:
             splash("DNMS LR TEACH", "No Laser");
             protectedSerialSend(PERM_INFO, DMS_LR_Teach_LOFF);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_NO_TRIAL;
             zxLaserSessions(5, 6, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
@@ -1900,7 +1944,7 @@ void callFunction(int n) {
         case 4328:
             splash("MW/OD LR TEACH", "No Laser");
             protectedSerialSend(PERM_INFO, MSWOD_LR_Teach_LOFF);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_NO_TRIAL;
             zxLaserSessions(5, 6, laserRampDuringDelay, 0, 10, 20, 0.05, 30, 20, 1.0);
             break;
@@ -1908,7 +1952,7 @@ void callFunction(int n) {
         case 4329:
             splash("LR DNMS 5s Delay", "Laser + -");
             protectedSerialSend(PERM_INFO, DMS_LR_5Delay_Laser);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
             zxLaserSessions(5, 6, laserRampDuringDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
@@ -1917,7 +1961,7 @@ void callFunction(int n) {
         case 4330:
             splash("LR DNMS 8s Delay", "Laser + -");
             protectedSerialSend(PERM_INFO, DMS_LR_8Delay_Laser);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
             zxLaserSessions(5, 6, laserRampDuringDelay, 8, 16, 20, 0.05, 30, 20, 1.0);
@@ -1946,7 +1990,7 @@ void callFunction(int n) {
         case 4334:
             splash("LR DNMS 12s Delay", "Laser + -");
             protectedSerialSend(PERM_INFO, DMS_LR_12Delay_Laser);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
             zxLaserSessions(5, 6, laserRampDuringDelay, 12, 24, 20, 0.05, 30, 20, 1.0);
@@ -1956,7 +2000,7 @@ void callFunction(int n) {
         case 4335:
             splash("LR DNMS 1st Odor", "Laser + -");
             protectedSerialSend(PERM_INFO, DMS_LR_1Odor_Laser);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             zxLaserSessions(5, 6, laserDuring1stOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
@@ -1964,7 +2008,7 @@ void callFunction(int n) {
         case 4336:
             splash("LR DNMS 2nd Odor", "Laser + -");
             protectedSerialSend(PERM_INFO, DMS_LR_2Odor_Laser);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             zxLaserSessions(5, 6, laserDuring2ndOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
@@ -1972,7 +2016,7 @@ void callFunction(int n) {
         case 4337:
             splash("LR DNMS 1+2 Odor", "Laser + -");
             protectedSerialSend(PERM_INFO, DMS_LR_bothOdor_Laser);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             zxLaserSessions(5, 6, laserDuringOdor, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
@@ -1980,7 +2024,7 @@ void callFunction(int n) {
         case 4338:
             splash("LR DNMS Baseline", "Laser + -");
             protectedSerialSend(PERM_INFO, DMS_LR_baseline_Laser);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             zxLaserSessions(5, 6, laserDuringBaseline, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
@@ -1988,7 +2032,7 @@ void callFunction(int n) {
         case 4339:
             splash("LR DNMS Response", "Laser + -");
             protectedSerialSend(PERM_INFO, DMS_LR_response_Laser);
-            taskType = DNMS_LR_TEACH;
+            taskType = DNMS_2AFC_TEACH;
             laserTrialType = LASER_OTHER_TRIAL;
             zxLaserSessions(5, 6, laserDuringResponseDelay, 5, 10, 20, 0.05, 30, 20, 1.0);
             break;
@@ -2136,7 +2180,7 @@ void callFunction(int n) {
         case 4413:
         {
             splash("DNMS LR Distra.", "Laser EveryTrial");
-            taskType = DNMS_LR_TASK;
+            taskType = DNMS_2AFC_TASK;
             laserTrialType = LASER_EVERY_TRIAL;
             zxLaserSessions(5, 6, laserDelayDistractor, 5, 10, 20, 0.05, 200, 10, 1.0);
             break;
@@ -2231,7 +2275,7 @@ void callFunction(int n) {
         {
             splash("VarDelay LR", "DC laser");
             int delay = setDelay(1);
-            taskType = DNMS_LR_TASK;
+            taskType = DNMS_2AFC_TASK;
             int type = setType();
             zxLaserSessions(type, type + 1, laserDuringDelay, delay, delay * 2, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
@@ -2245,7 +2289,7 @@ void callFunction(int n) {
             laserPeriod = laserDuring4Baseline;
             switch (m) {
                 case 1:
-                    taskType = GONOGO_LR_TEACH;
+                    taskType = GONOGO_2AFC_TEACH;
                     laserTrialType = LASER_NO_TRIAL;
                     break;
                 case 3:
@@ -2263,7 +2307,7 @@ void callFunction(int n) {
         case 4433:
         {
             splash("DNMS LR", "Laser EveryTrial");
-            taskType = DNMS_LR_TASK;
+            taskType = DNMS_2AFC_TASK;
             laserTrialType = LASER_EVERY_TRIAL;
             zxLaserSessions(5, 6, laserDuringDelayChR2, 5, 10, 20, 0.05, 200, 10, 1.0);
             break;
@@ -2276,7 +2320,7 @@ void callFunction(int n) {
         case 4435:
         {
             splash("Baseline LR", "Laser EveryTrial");
-            taskType = DNMS_LR_TASK;
+            taskType = DNMS_2AFC_TASK;
             zxLaserSessions(5, 6, laserDuring3Baseline, 5, 10, 20, 0.05, 200, 20, 1.0);
             break;
         }
@@ -2293,21 +2337,21 @@ void callFunction(int n) {
         case 4441:
         {
             splash("First Odor LR", "Laser EveryTrial");
-            taskType = DNMS_LR_TASK;
+            taskType = DNMS_2AFC_TASK;
             zxLaserSessions(5, 6, laserDuring1stOdor, 5, 10, 20, 0.05, 200, 20, 1.0);
             break;
         }
         case 4442:
         {
             splash("Second Odor LR", "Laser EveryTrial");
-            taskType = DNMS_LR_TASK;
+            taskType = DNMS_2AFC_TASK;
             zxLaserSessions(5, 6, laserDuring2ndOdor, 5, 10, 20, 0.05, 200, 20, 1.0);
             break;
         }
         case 4443:
         {
             splash("Response Delay LR", "Laser EveryTrial");
-            taskType = DNMS_LR_TASK;
+            taskType = DNMS_2AFC_TASK;
             zxLaserSessions(5, 6, laserDuringResponseDelay, 5, 10, 20, 0.05, 200, 20, 1.0);
             break;
         }
@@ -2319,7 +2363,7 @@ void callFunction(int n) {
 
         case 4446:
         {
-            int f = getFuncNumberMarquee(3, "0123456798ABCDEFGHIJKLMN", 24);
+            unsigned int f = getFuncNumberMarquee(3, "0123456798ABCDEFGHIJKLMN", 24);
             home_clr();
             lcdWriteNumber(f, 4, 1, 1);
             while (1);

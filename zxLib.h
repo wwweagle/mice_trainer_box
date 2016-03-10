@@ -40,7 +40,7 @@ typedef struct {
 
 typedef struct {
     unsigned int current;
-    unsigned int filter;
+    unsigned long filter;
     unsigned int flag;
     unsigned int LCount;
     unsigned int RCount;
@@ -187,14 +187,15 @@ typedef unsigned int _delayT;
 //#define _ASSOCIATE_SHAPPING_TASK 24
 //#define _ASSOCIATE_TASK 25
 #define GONOGO_TASK 30
-#define DNMS_LR_TEACH 38
+#define DNMS_2AFC_TEACH 38
 #define DNMS_LR_LEARNING_TASK 39
-#define DNMS_LR_TASK 40
-#define GONOGO_LR_TEACH 49
+#define DNMS_2AFC_TASK 40
+#define GONOGO_2AFC_TEACH 49
 #define GONOGO_LR_TASK 50
 #define NO_ODOR_CATCH_TRIAL_TASK 60
 #define VARY_ODOR_LENGTH_TASK 70
 #define OPTO_DPAL_TASK 80
+#define OPTO_DPAL_SHAPING_TASK 81
 
 
 #define EEP_DUTY_LOW_L_OFFSET 0

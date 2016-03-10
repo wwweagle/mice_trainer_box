@@ -87,8 +87,8 @@ extern "C" {
 #define Out4 PORTEbits.RE9
 #define Out5 PORTAbits.RA9
 #define Out6 PORTAbits.RA10
-#define Out7 PORTAbits.RA9
-#define Out8 PORTAbits.RA10
+//#define Out7 PORTAbits.RA9
+//#define Out8 PORTAbits.RA10
 
 #define  water_sweet    1    //pwm1L		//same as old definition
 #define  odor_A           2       //pwm1H		//same as old definition

@@ -423,6 +423,8 @@ void Valve_OFF(unsigned int N) {
             break;
         case 8: PORTCbits.RC1 = 0;
             break;
+        default:
+            break;
     }
 }
 
