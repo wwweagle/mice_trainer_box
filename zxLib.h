@@ -40,16 +40,17 @@ typedef struct {
 
 typedef struct {
     unsigned int current;
-    unsigned long filter;
+    unsigned int filter;
     unsigned int flag;
     unsigned int LCount;
     unsigned int RCount;
 } LICK_T;
 
-typedef struct{
+typedef struct {
     unsigned int stim1Length;
     unsigned int stim2Length;
     unsigned int distractorLength;
+    unsigned int currentDistractor;
 } STIM_T;
 
 #define _EE_WORD         2
@@ -66,6 +67,7 @@ extern void safe_wait_ms(int duration);
 
 typedef unsigned int _delayT;
 
+#define laserOff 0
 #define laserDuring3Baseline 3
 #define laserDuring4Baseline 4
 #define laserDuringBaseline 5
@@ -74,7 +76,7 @@ typedef unsigned int _delayT;
 #define laserDuringBaselineNDelay 9
 #define laserDuringDelay 10
 #define laserDuringDelayChR2 11
-#define laserDelayDistractor 12
+
 #define laserRampDuringDelay 14
 //#define laserLDuringDelay 15
 //#define laserRDuringDelay 16
@@ -112,6 +114,8 @@ typedef unsigned int _delayT;
 #define laserSufficiency 130
 
 
+
+
 //#define atTrialStart 10
 #define fourSecBeforeFirstOdor 4
 #define threeSecBeforeFirstOdor 5
@@ -126,7 +130,7 @@ typedef unsigned int _delayT;
 #define atDelay2SecIn 52
 #define atDelay2_5SecIn 53
 #define atDelay3SecIn 54
-#define atDelay_5ToMiddle 55
+#define atDelay500msToMiddle 55
 #define atDelayMiddle 56
 #define atDelay8_5SecIn 57
 #define atDelay9SecIn 58
@@ -135,7 +139,7 @@ typedef unsigned int _delayT;
 #define atDelayLast1_5SecBegin 61
 #define atDelayLastSecBegin 63
 #define atDelayLast500mSBegin 65
-#define atDelayLast200mSBegin 68
+//#define atDelayLast200mSBegin 68
 #define atSecondOdorBeginning 70
 #define atSecondOdorEnd 80
 //#define atRewardDelayBeginning 90
@@ -164,13 +168,8 @@ typedef unsigned int _delayT;
 #define LASER_LR_EVERYTRIAL 40
 #define LASER_LR_EVERY_OTHER_TRIAL 42
 #define LASER_INCONGRUENT_CATCH_TRIAL 45
-//#define laserCycleDelayLaser 30
 
-#define LASER_CUE_OFFSET_0 20
-#define LASER_CUE_TYPE_I 21
-#define LASER_CUE_TYPE_II 22
-#define LASER_CUE_TYPE_III 23
-#define LASER_CUE_TYPE_IV 24
+
 
 
 
@@ -196,6 +195,8 @@ typedef unsigned int _delayT;
 #define VARY_ODOR_LENGTH_TASK 70
 #define OPTO_DPAL_TASK 80
 #define OPTO_DPAL_SHAPING_TASK 81
+#define DELAY_DISTRACTOR_EARLY_TASK 90
+#define DELAY_DISTRACTOR_LATE_TASK 95
 
 
 #define EEP_DUTY_LOW_L_OFFSET 0
@@ -225,7 +226,7 @@ typedef unsigned int _delayT;
 char * getVer(void);
 
 extern const char odorTypes[];
-extern unsigned int laserTrialType;
+extern unsigned int laserSessionType;
 extern unsigned int taskType;
 //extern unsigned int licking;
 //extern unsigned int timeFilter;
