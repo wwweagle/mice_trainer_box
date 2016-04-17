@@ -8,7 +8,7 @@ STIM_T stims = {.stim1Length = 1000u, .stim2Length = 1000u, .distractorLength = 
 LASER_T laser = {.timer = 0u, .onTime = 65535u, .offTime = 0u, .ramp = 0u, .ramping = 0u, .on = 0u, .side = 3u};
 PWM_T pwm = {.L_Hi = 0xfe, .R_Hi = 0xfe, .L_Lo = 0u, .R_Lo = 0u, .fullDuty = 0xfe};
 LICK_T lick = {.current = 0u, .filter = 0u, .flag = 0u, .LCount = 0u, .RCount = 0u};
-const char odorTypes[] = " WBJlRQMN0123456789012345678901234567890123456789";
+const char odorTypes[] = " WBYLRQHN0123456789012345678901234567890123456789";
 unsigned int laserSessionType = LASER_EVERY_TRIAL;
 unsigned int taskType = DNMS_TASK;
 unsigned int wait_Trial = 1u;
@@ -684,7 +684,7 @@ static void processLRTeaching(float waterPeroid, int LR) {
 static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
     lick.flag = 0;
     switch (taskType) {
-            
+
             /*
              *DNMS-LR
              */
@@ -754,16 +754,16 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid) {
                 processHit(waterPeroid, 1, 1);
             }
             break;
-            
+
             /*///////////////
              *DNMS
              *//////////////
-//        case DNMS_TASK:
-//        case SHAPPING_TASK:
-//        case OPTO_DPAL_TASK:
-//        case OPTO_DPAL_SHAPING_TASK:
-//        case NO_ODOR_CATCH_TRIAL_TASK:
-//        case VARY_ODOR_LENGTH_TASK:
+            //        case DNMS_TASK:
+            //        case SHAPPING_TASK:
+            //        case OPTO_DPAL_TASK:
+            //        case OPTO_DPAL_SHAPING_TASK:
+            //        case NO_ODOR_CATCH_TRIAL_TASK:
+            //        case VARY_ODOR_LENGTH_TASK:
         default:
 
             //        case _ASSOCIATE_TASK:
@@ -807,9 +807,17 @@ static void distractor(unsigned int distractOdor) {
 }
 
 static void waitTrial() {
+    static int waitingLickRelease = 0;
     if (!wait_Trial) {
         return;
     }
+    while (LICK_ANY) {
+        if (!waitingLickRelease) {
+            protectedSerialSend(20, 100);
+            waitingLickRelease = 1;
+        }
+    }
+    waitingLickRelease = 0;
 
     while (u2Received != 0x31) {
         protectedSerialSend(20, 1);
@@ -2164,16 +2172,24 @@ void callFunction(int n) {
 
         case 4360:
         {
+            splash("Distractor Early", "Training");
+            highLevelShuffleLength = 20;
+            taskType = DELAY_DISTRACTOR_EARLY_TASK;
+            zxLaserSessions(5, 6, laserOff, 8u, 16, 20, 0.05, 50, setSessionNum(), 1.0);
+            break;
+        }
+
+
+
+        case 4361:
+        {
             splash("Distractor Early", "");
             highLevelShuffleLength = 20;
             taskType = DELAY_DISTRACTOR_EARLY_TASK;
             zxLaserSessions(5, 6, laserDuringLateHalf, 8u, 16, 20, 0.05, 50, setSessionNum(), 1.0);
             break;
         }
-        case 4361:
-        {
-            break;
-        }
+
         case 4400:
             write_eeprom(EEP_DUTY_LOW_R_OFFSET, 0x7f);
             write_eeprom(EEP_DUTY_LOW_L_OFFSET, 0x7f);
@@ -2236,15 +2252,7 @@ void callFunction(int n) {
             break;
         }
 
-        case 4417:
-        {
-            splash("DNMS Shaping", "");
-            laserSessionType = LASER_NO_TRIAL;
-            taskType = SHAPPING_TASK;
-            int type = setType();
-            zxLaserSessions(type, type + 1, laserDuringDelay, 4u, 8, 20, 0.036, 50, setSessionNum(), 1.0);
-            break;
-        }
+
         case 4418:
             splash("Feed Water", "");
             feedWaterFast(36);
