@@ -51,6 +51,7 @@ typedef struct {
     unsigned int stim2Length;
     unsigned int distractorLength;
     unsigned int currentDistractor;
+    unsigned int distractorJudgingPair;
 } STIM_T;
 
 #define _EE_WORD         2
@@ -66,7 +67,7 @@ extern void safe_wait_ms(int duration);
 
 
 typedef unsigned int _delayT;
-
+//laser trial type
 #define laserOff 0
 #define laserDuring3Baseline 3
 #define laserDuring4Baseline 4
@@ -112,6 +113,11 @@ typedef unsigned int _delayT;
 #define laser1sRamp 123
 #define laser_5sRamp 124
 #define laserSufficiency 130
+#define laserBeforeDistractor 140
+#define laserCoverDistractor 145
+#define laserAfterDistractor 149
+
+
 
 
 
@@ -125,17 +131,18 @@ typedef unsigned int _delayT;
 #define atFirstOdorEnd 30
 #define atDelayBegin 40
 #define atDelay_5SecIn 42
-#define atDelay1SecIn 50
-#define atDelay1_5SecIn 51
-#define atDelay2SecIn 52
-#define atDelay2_5SecIn 53
-#define atDelay3SecIn 54
-#define atDelay500msToMiddle 55
-#define atDelayMiddle 56
-#define atDelay8_5SecIn 57
-#define atDelay9SecIn 58
-#define atDelayLast2_5SecBegin 59
-#define atDelayLast2SecBegin 60
+#define atDelay1SecIn 200
+#define atDelay1_5SecIn 205
+#define atDelay2SecIn 210
+#define atDelay2_5SecIn 215
+#define atDelay3SecIn 220
+#define atDelay500msToMiddle 225
+#define atDelayMiddle 230
+#define atDelayMid2Sec 235
+#define atDelayMid2_5Sec 240
+#define atDelayMid3Sec 245
+#define atDelayLast2_5SecBegin 250
+#define atDelayLast2SecBegin 255
 #define atDelayLast1_5SecBegin 61
 #define atDelayLastSecBegin 63
 #define atDelayLast500mSBegin 65
@@ -152,7 +159,7 @@ typedef unsigned int _delayT;
 #define atITIEnd 160
 
 
-//Laser Delivery Type, including ZJ's variety
+//Laser Session Type, including ZJ's variety
 #define LASER_OTHER_TRIAL 1
 #define LASER_NO_TRIAL 2
 #define LASER_EVERY_TRIAL 3
@@ -168,9 +175,6 @@ typedef unsigned int _delayT;
 #define LASER_LR_EVERYTRIAL 40
 #define LASER_LR_EVERY_OTHER_TRIAL 42
 #define LASER_INCONGRUENT_CATCH_TRIAL 45
-
-
-
 
 
 #define LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
@@ -195,8 +199,8 @@ typedef unsigned int _delayT;
 #define VARY_ODOR_LENGTH_TASK 70
 #define OPTO_ODPA_TASK 80
 #define OPTO_ODPA_SHAPING_TASK 81
-#define DELAY_DISTRACTOR_EARLY_TASK 90
-#define DELAY_DISTRACTOR_LATE_TASK 95
+#define DELAY_DISTRACTOR_LEARNING 90
+#define DELAY_DISTRACTOR_TASK 95
 #define ODPA_SHAPING_TASK 99
 #define ODPA_TASK 100
 
@@ -244,7 +248,7 @@ void lcdWriteNumber(int n, int digits, int x, int y);
 void lcdWriteChar(char ch, int x, int y);
 void lcdWriteString(char* s);
 
-void odorDepeltion(int totalTrial, int p3);
+void odorDepeltion(int totalTrial, int p3, int p78);
 
 //extern static void zxLaserTrial(int type, int FirstOdorIn, float odorLength, _delayT OdorDelayIn, int SecondOdorIn, float WaterLIn, int ITI, float delay_before_reward, int laserOnTrial);
 void callFunction(int n);

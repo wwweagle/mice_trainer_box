@@ -29,10 +29,10 @@ int main(void) {
         unsigned int n = getFuncNumber(4, "Main Function ?");
         srand(timerCounterI);
         switch (n) {
-//            case 1111:
-//                n = getFuncNumber(1, " 2  5  10 30 600");
-//                feedWater(n);
-//                break;
+                //            case 1111:
+                //                n = getFuncNumber(1, " 2  5  10 30 600");
+                //                feedWater(n);
+                //                break;
                 //            case 1112:
                 //                test_odorA();
                 //                break;
@@ -97,11 +97,15 @@ int main(void) {
                        lydGoNogoSessions(n==1);
                        break;*/
             case 5555:
-                odorDepeltion(120, 1);
+                odorDepeltion(120, 1, 0);
                 break;
 
             case 5556:
-                odorDepeltion(120, 0);
+                odorDepeltion(120, 0, 0);
+                break;
+
+            case 5557:
+                odorDepeltion(300, 1, 1);
                 break;
 
         }

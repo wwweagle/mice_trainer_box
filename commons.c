@@ -364,13 +364,13 @@ void Init_PWM(void) {
     PORTFbits.RF0 = 1;
     Nop();
     Nop();
-    PORTCbits.RC1 = 1;
-    Nop();
-    Nop();
+//    PORTCbits.RC1 = 1;
+//    Nop();
+//    Nop();
     PDC2 = FULLDUTY;
-    Nop();
-    Nop();
-    PDC4 = FULLDUTY;
+//    Nop();
+//    Nop();
+//    PDC4 = FULLDUTY; //ZX 20160503 TEMP Distractor work around-
 }
 #undef FULLDUTY
 
