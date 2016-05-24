@@ -232,7 +232,7 @@ void counts_dispose(unsigned int counter);
 
 extern unsigned int period;
 extern unsigned int ones, tens, hunds, thous;
-extern unsigned int timerCounterI, timerCounterJ;
+extern volatile unsigned int timerCounterI, timerCounterJ;
 extern unsigned char key_val;
 
 extern unsigned char hardwareKey;

@@ -29,21 +29,21 @@ typedef struct {
 } PWM_T;
 
 typedef struct {
-    unsigned int timer;
+    volatile unsigned int timer;
     unsigned int onTime;
     unsigned int offTime;
     unsigned int ramp;
-    unsigned int ramping;
+    volatile unsigned int ramping;
     unsigned int on;
     unsigned int side;
 } LASER_T;
 
 typedef struct {
-    unsigned int current;
-    unsigned int filter;
+    volatile unsigned int current;
+    volatile unsigned int filter;
     unsigned int flag;
-    unsigned int LCount;
-    unsigned int RCount;
+    volatile unsigned int LCount;
+    volatile unsigned int RCount;
 } LICK_T;
 
 typedef struct {
@@ -91,9 +91,9 @@ typedef unsigned int _delayT;
 #define laserNoDelayControlShort 69
 #define laserNoDelayControl 70
 #define laserDuringEarlyHalf 80
-//#define laserDuring1Terice 81
-//#define laserDuring2Terice 82
-//#define laserDuring3Terice 83
+#define laserDuring1Terice 81
+#define laserDuring2Terice 82
+#define laserDuring3Terice 83
 #define laserDuringLateHalf 90
 #define laserDuring1Quarter 91
 #define laserDuring2Quarter 92
@@ -122,6 +122,7 @@ typedef unsigned int _delayT;
 
 
 
+
 //#define atTrialStart 10
 #define fourSecBeforeFirstOdor 4
 #define threeSecBeforeFirstOdor 5
@@ -136,8 +137,13 @@ typedef unsigned int _delayT;
 #define atDelay2SecIn 210
 #define atDelay2_5SecIn 215
 #define atDelay3SecIn 220
+#define atPreDualTask 222
+#define atPostDualTask 223
+#define atDelay1sToMiddle 224
 #define atDelay500msToMiddle 225
 #define atDelayMiddle 230
+#define atDelayMid500mSec 232
+#define atDelayMid1Sec 233
 #define atDelayMid2Sec 235
 #define atDelayMid2_5Sec 240
 #define atDelayMid3Sec 245
@@ -175,6 +181,8 @@ typedef unsigned int _delayT;
 #define LASER_LR_EVERYTRIAL 40
 #define LASER_LR_EVERY_OTHER_TRIAL 42
 #define LASER_INCONGRUENT_CATCH_TRIAL 45
+#define LASER_13s_EarlyMidLate 50
+#define LASER_DUAL_TASK_ON_OFF 60
 
 
 #define LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
@@ -199,10 +207,13 @@ typedef unsigned int _delayT;
 #define VARY_ODOR_LENGTH_TASK 70
 #define OPTO_ODPA_TASK 80
 #define OPTO_ODPA_SHAPING_TASK 81
-#define DELAY_DISTRACTOR_LEARNING 90
-#define DELAY_DISTRACTOR_TASK 95
+#define DUAL_TASK_LEARNING 90
+#define DUAL_TASK 93
+#define DUAL_TASK_ON_OFF_LASER_TASK 95
+
 #define ODPA_SHAPING_TASK 99
 #define ODPA_TASK 100
+
 
 
 #define EEP_DUTY_LOW_L_OFFSET 0

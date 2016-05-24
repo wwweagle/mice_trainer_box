@@ -4,7 +4,7 @@
 unsigned int period;
 
 unsigned int ones, tens, hunds, thous;
-unsigned int timerCounterI = 0, timerCounterJ = 0;
+volatile unsigned int timerCounterI = 0, timerCounterJ = 0;
 unsigned char key_val;
 int u2Received = -1;
 
