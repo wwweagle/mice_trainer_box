@@ -97,15 +97,15 @@ int main(void) {
                        lydGoNogoSessions(n==1);
                        break;*/
             case 5555:
-                odorDepeltion(120, 1, 0);
+                odorDepeltion(500, 1, 0);
                 break;
 
             case 5556:
-                odorDepeltion(120, 0, 0);
+                odorDepeltion(500, 0, 0);
                 break;
 
             case 5557:
-                odorDepeltion(300, 1, 1);
+                odorDepeltion(500, 1, 1);
                 break;
 
         }
