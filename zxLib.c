@@ -286,7 +286,7 @@ static void assertLaser(int type, int step) {
             }
             break;
         case laserDuringDelay:
-            if (step == atFirstOdorEnd) {
+            if (step == atDelay1SecIn) {
                 turnOnLaser(3);
             } else if (step == atDelayLast500mSBegin) {
                 turnOffLaser();
@@ -505,36 +505,36 @@ static void assertLaser(int type, int step) {
                 turnOffLaser();
             }
             break;
-        case laserAfterDistractor:
-            if (step == atDelayMid2_5Sec) {
-                turnOnLaser(laser.side);
-            } else if (step == atDelayLast2_5SecBegin) {
-                turnOffLaser();
-            }
-            break;
-        case laserAfterDistractorLong:
-            if (step == atDelayMid2_5Sec) {
-                turnOnLaser(laser.side);
-            } else if (step == atDelayLast500mSBegin) {
-                turnOffLaser();
-            }
-            break;
+//        case laserAfterDistractor:
+//            if (step == atDelayMid2_5Sec) {
+//                turnOnLaser(laser.side);
+//            } else if (step == atDelayLast2_5SecBegin) {
+//                turnOffLaser();
+//            }
+//            break;
+//        case laserAfterDistractorLong:
+//            if (step == atDelayMid2_5Sec) {
+//                turnOnLaser(laser.side);
+//            } else if (step == atDelayLast500mSBegin) {
+//                turnOffLaser();
+//            }
+//            break;
         case laserDuring1Terice:
             if (step == atFirstOdorEnd) {
                 turnOnLaser(laser.side);
-            } else if (step == atDelay1_5SecIn) {
+            } else if (step == atDelay3_5SIn) {
                 turnOffLaser();
             }
             break;
         case laserDuring2Terice:
-            if (step == atDelay1sToMiddle) {
+            if (step == atDelay4_5SIn) {
                 turnOnLaser(laser.side);
-            } else if (step == atDelayMid500mSec) {
+            } else if (step == atDelayMid1_5Sec) {
                 turnOffLaser();
             }
             break;
         case laserDuring3Terice:
-            if (step == atDelayLast2SecBegin) {
+            if (step == atDelayMid2_5Sec) {
                 turnOnLaser(laser.side);
             } else if (step == atDelayLast500mSBegin) {
                 turnOffLaser();
@@ -544,6 +544,14 @@ static void assertLaser(int type, int step) {
             if (step == atPreDualTask) {
                 turnOnLaser(laser.side);
             } else if (step == atPostDualTask) {
+                turnOffLaser();
+            }
+            break;
+
+        case laserAfterDistractorMax:
+            if (step == atPostDualTask) {
+                turnOnLaser(laser.side);
+            } else if (step == atDelayLast500mSBegin) {
                 turnOffLaser();
             }
             break;
@@ -861,8 +869,8 @@ static void distractor(unsigned int distractOdor, unsigned int judgingPair, floa
         Nop();
         Nop();
         lcdWriteChar('D', 4, 1);
-        waterNResult(distractOdor, judgingPair, waterLen, 3);
         wait_ms(450u);
+        waterNResult(distractOdor, judgingPair, waterLen, 3);
     }
 }
 
@@ -1394,12 +1402,17 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
                         assertLaser(type, atPostDualTask);
                         waitTimerJ(450u); //distractor@6sec
                     }
-                } else if (interOdorDelay == 12) {
+                } else if (interOdorDelay >= 12u) {
                     waitTimerJ(500u);
                     assertLaser(type, atDelay2_5SecIn);
                     waitTimerJ(500u);
                     assertLaser(type, atDelay3SecIn);
-                    waitTimerJ(2500u);
+                    waitTimerJ(500u); //->3.5s
+                    assertLaser(type, atDelay3_5SIn);
+                    waitTimerJ(1000u); //->4.5s
+                    assertLaser(type, atDelay4_5SIn);
+                    waitTimerJ(1000u);
+                    waitTimerJ((interOdorDelay - 12u)*500u);
                 } else {
                     waitTimerJ(interOdorDelay * 500u - 3000u);
                     assertLaser(type, atDelay1sToMiddle); //13@5500
@@ -1407,14 +1420,16 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
                 }
 
                 assertLaser(type, atDelay500msToMiddle); //distractor@6 //13@6000
-                waitTimerJ(500u); //13@6500
+                waitTimerJ(500u);
                 assertLaser(type, atDelayMiddle); //13@6.5
                 if (interOdorDelay >= 12) {
                     waitTimerJ(500u); //13@7
                     assertLaser(type, atDelayMid500mSec);
                     waitTimerJ(500u); //13@7.5
                     assertLaser(type, atDelayMid1Sec);
-                    waitTimerJ(1000u); //13@8.5
+                    waitTimerJ(500u); //13@8S
+                    assertLaser(type, atDelayMid1_5Sec);
+                    waitTimerJ(500u); //13@8.5
                     assertLaser(type, atDelayMid2Sec);
                     waitTimerJ(500u); //distractor@9s//13@9
                     assertLaser(type, atDelayMid2_5Sec);
@@ -2397,14 +2412,14 @@ void callFunction(int n) {
 
         case 4360:
         {
-            splash("Distractor", "Training");
+            splash("Dual Task", "Training");
             highLevelShuffleLength = 24;
             splash("Sample Odor", "");
             int sampleType = setType();
             splash("Test Odor", "");
             int testType = setType();
             taskType = DUAL_TASK_LEARNING;
-            zxLaserSessions(sampleType, testType, laserOff, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserOff, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
 
@@ -2412,7 +2427,7 @@ void callFunction(int n) {
 
         case 4361:
         {
-            splash("Distractor", "");
+            splash("Dual Task", "");
             highLevelShuffleLength = 24;
             splash("Sample Odor", "");
             int sampleType = setType();
@@ -2421,7 +2436,7 @@ void callFunction(int n) {
             taskType = DUAL_TASK;
             laserSessionType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
-            zxLaserSessions(sampleType, testType, laserAfterDistractor, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserAfterDistractorMax, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
         case 4362:
@@ -2435,7 +2450,7 @@ void callFunction(int n) {
             taskType = DUAL_TASK_ON_OFF_LASER_TASK;
             laserSessionType = LASER_DUAL_TASK_ON_OFF;
             laser.ramp = 500;
-            zxLaserSessions(sampleType, testType, laserOff, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserOff, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
         case 4363:
@@ -2449,7 +2464,22 @@ void callFunction(int n) {
             taskType = DUAL_TASK_ODAP_ON_OFF_LASER_TASK;
             laserSessionType = LASER_DUAL_TASK_ODAP_ON_OFF;
             laser.ramp = 500;
-            zxLaserSessions(sampleType, testType, laserOff, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserOff, 13u, 13u, 24u, 0.05, 30, setSessionNum());
+            break;
+        }
+
+        case 4364:
+        {
+            splash("Dual Task", "Training Laser");
+            highLevelShuffleLength = 24;
+            splash("Sample Odor", "");
+            int sampleType = setType();
+            splash("Test Odor", "");
+            int testType = setType();
+            taskType = DUAL_TASK_LEARNING;
+            laserSessionType = LASER_EVERY_TRIAL;
+            laser.ramp = 500;
+            zxLaserSessions(sampleType, testType, laserAfterDistractorMax, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
 
@@ -2463,7 +2493,7 @@ void callFunction(int n) {
             splash("Test Odor", "");
             int testType = setType();
 
-            zxLaserSessions(sampleType, testType, laserOff, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserOff, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
 
@@ -2476,7 +2506,7 @@ void callFunction(int n) {
             int sampleType = setType();
             splash("Test Odor", "");
             int testType = setType();
-            zxLaserSessions(sampleType, testType, laserOff, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserOff, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
 
@@ -2490,7 +2520,7 @@ void callFunction(int n) {
             int sampleType = setType();
             splash("Test Odor", "");
             int testType = setType();
-            zxLaserSessions(sampleType, testType, laserDuringDelay, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserDuringDelay, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
 
@@ -2589,7 +2619,7 @@ void callFunction(int n) {
             splash("Test Odor", "");
             int testType = setType();
             laser.ramp = 500;
-            zxLaserSessions(sampleType, testType, laserOff, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserOff, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
 
@@ -2600,7 +2630,7 @@ void callFunction(int n) {
             splash("Odor", "");
             int odorType = setType();
             taskType = DNMS_DUAL_TASK_LEARNING;
-            zxLaserSessions(odorType, odorType + 1, laserOff, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(odorType, odorType + 1, laserOff, 13u, 13u, 24u, 0.05, 30, setSessionNum());
             break;
         }
 
@@ -2613,7 +2643,7 @@ void callFunction(int n) {
             taskType = DNMS_DUAL_TASK;
             laserSessionType = LASER_OTHER_TRIAL;
             laser.ramp = 500;
-            zxLaserSessions(odorType, odorType + 1, laserAfterDistractorLong, 13u, 20u, 24u, 0.05, 30, setSessionNum());
+            zxLaserSessions(odorType, odorType + 1, laserAfterDistractorMax, 13u, 20u, 24u, 0.05, 30, setSessionNum());
             break;
         }
 

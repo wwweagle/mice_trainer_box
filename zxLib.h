@@ -115,8 +115,9 @@ typedef unsigned int _delayT;
 #define laserSufficiency 130
 #define laserBeforeDistractor 140
 #define laserCoverDistractor 145
-#define laserAfterDistractor 147
-#define laserAfterDistractorLong 149
+//#define laserAfterDistractor 147
+//#define laserAfterDistractorLong 149
+#define laserAfterDistractorMax 151
 
 
 
@@ -136,15 +137,18 @@ typedef unsigned int _delayT;
 #define atDelay1SecIn 200
 #define atDelay1_5SecIn 205
 #define atDelay2SecIn 210
-#define atDelay2_5SecIn 215
-#define atDelay3SecIn 220
-#define atPreDualTask 222
-#define atPostDualTask 223
+#define atDelay2_5SecIn 212
+#define atDelay3SecIn 214
+#define atDelay3_5SIn 216
+#define atDelay4_5SIn 218
+#define atPreDualTask 220
+#define atPostDualTask 222
 #define atDelay1sToMiddle 224
 #define atDelay500msToMiddle 225
 #define atDelayMiddle 230
 #define atDelayMid500mSec 232
 #define atDelayMid1Sec 233
+#define atDelayMid1_5Sec 234
 #define atDelayMid2Sec 235
 #define atDelayMid2_5Sec 240
 #define atDelayMid3Sec 245
