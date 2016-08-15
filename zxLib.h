@@ -52,6 +52,8 @@ typedef struct {
     unsigned int distractorLength;
     unsigned int currentDistractor;
     unsigned int distractorJudgingPair;
+    unsigned int distr2;
+    unsigned int distr3;
 } STIM_T;
 
 #define _EE_WORD         2
@@ -115,9 +117,8 @@ typedef unsigned int _delayT;
 #define laserSufficiency 130
 #define laserBeforeDistractor 140
 #define laserCoverDistractor 145
-//#define laserAfterDistractor 147
-//#define laserAfterDistractorLong 149
 #define laserAfterDistractorMax 151
+#define laserAfterMultiDistractor 160
 
 
 
@@ -129,7 +130,7 @@ typedef unsigned int _delayT;
 #define fourSecBeforeFirstOdor 4
 #define threeSecBeforeFirstOdor 5
 #define oneSecBeforeFirstOdor 10
-#define at200mSBeforeFirstOdor 18
+#define at500mSBeforeFirstOdor 18
 #define atFirstOdorBeginning 20
 #define atFirstOdorEnd 30
 #define atDelayBegin 40
@@ -189,6 +190,8 @@ typedef unsigned int _delayT;
 #define LASER_13s_EarlyMidLate 50
 #define LASER_DUAL_TASK_ON_OFF 60
 #define LASER_DUAL_TASK_ODAP_ON_OFF 61
+#define LASER_AFTER_DISTR_3X 65
+#define LASER_OTHER_BLOCK 80
 
 
 #define LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
@@ -217,11 +220,13 @@ typedef unsigned int _delayT;
 #define DUAL_TASK 93
 #define DUAL_TASK_ON_OFF_LASER_TASK 95
 #define DUAL_TASK_ODAP_ON_OFF_LASER_TASK 96
-
+#define DUAL_TASK_DISTRx3_TASK 98
 #define ODPA_SHAPING_TASK 99
 #define ODPA_TASK 100
 #define DNMS_DUAL_TASK_LEARNING 110
 #define DNMS_DUAL_TASK 115
+#define DUAL_TASK_EVERY_TRIAL  120
+
 
 
 #define EEP_DUTY_LOW_L_OFFSET 0
