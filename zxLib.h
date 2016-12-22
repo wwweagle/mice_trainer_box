@@ -226,6 +226,7 @@ typedef unsigned int _delayT;
 #define DNMS_DUAL_TASK_LEARNING 110
 #define DNMS_DUAL_TASK 115
 #define DUAL_TASK_EVERY_TRIAL  120
+#define BALL_IMMOBILE 150
 
 
 
@@ -250,6 +251,9 @@ typedef unsigned int _delayT;
 #define DMS_LR_bothOdor_Laser 109
 #define DMS_LR_baseline_Laser 110
 #define DMS_LR_response_Laser 111
+
+
+#define SpBallMove 82
 
 
 //extern float odorLength;

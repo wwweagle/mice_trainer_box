@@ -140,16 +140,25 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         }
 
     }
-    if (LICK_LEFT && LICK_RIGHT) {
+    if (LICK_LEFT && LICK_RIGHT && (lick.current != LICKING_BOTH) && filtered()) {
+        lick.filter = timerCounterJ;
         Out1 = 1;
         Nop();
         Nop();
         Nop();
         Out6 = 1;
+        if (lick.current == LICKING_LEFT) {
+            lick.RCount++;
+        } else if (lick.current == LICKING_RIGHT) {
+            lick.LCount++;
+        } else {
+            lick.LCount++;
+            lick.RCount++;
+        }
         lick.current = LICKING_BOTH;
+        localSendOnce(SpLick, 4);
     } else if (LICK_LEFT && lick.current != LICKING_LEFT && filtered()) {
-        lick.filter = timerCounterJ;
-        //        lick.filter = timerCounter32;
+        lick.filter = timerCounterJ; //        lick.filter = timerCounter32;
         lick.current = LICKING_LEFT;
         Out1 = 1;
         Nop();
@@ -171,7 +180,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         Out1 = 0;
         lick.RCount++;
         Nop();
-        localSendOnce(SpLick, 3);
+        if (taskType != BALL_IMMOBILE) localSendOnce(SpLick, 3);
         //        tick(3);
     } else if (lick.current && !LICK_ANY) {
 
@@ -1289,7 +1298,7 @@ static void zxLaserSessions(int stim1, int stim2, int laserTrialType, _delayT de
 //    int stimSend = likeOdorA(stim) ? 9 : 10;
 //    protectedSerialSend(stimSend, stim);
 //    lcdWriteChar(place == 1 ? '1' : '2', 4, 1);
-//    switch (stim) {
+//   i switch (stim) {
 //        case 21:
 //        {
 //            int timePassed = 0;
@@ -1827,55 +1836,75 @@ static void feedWaterFast(int waterLength) {
         }
     }
 }
+//
+//static void feedWaterBall(int waterLength) {
+//
+//    lick.LCount = 0;
+//    lick.RCount = 0;
+//    unsigned int waterCount = 0;
+//    unsigned int totalLickCount = 0;
+//    splash("Total Lick", "");
+//
+//    timerCounterI = 1000;
+//    while (1) {
+//        if (lick.LCount + lick.RCount > totalLickCount) {
+//            if (timerCounterI >= 500) {
+//                Valve_ON(water_sweet, pwm.fullDuty);
+//                timerCounterI = 0;
+//                lcdWriteNumber(++waterCount, 4, 13, 2);
+//            }
+//            totalLickCount = lick.LCount + lick.RCount;
+//            lcdWriteNumber(totalLickCount, 4, 12, 1);
+//        }
+//        if (timerCounterI >= waterLength) {
+//            Valve_OFF(water_sweet);
+//        }
+//    }
+//}
 
-static void feedWaterBall(int waterLength) {
-
-    lick.LCount = 0;
-    lick.RCount = 0;
-    unsigned int waterCount = 0;
-    unsigned int totalLickCount = 0;
-    splash("Total Lick", "");
-
-    timerCounterI = 1000;
-    while (1) {
-        if (lick.LCount + lick.RCount > totalLickCount) {
-            if (timerCounterI >= 500) {
-                Valve_ON(water_sweet, pwm.fullDuty);
-                timerCounterI = 0;
-                lcdWriteNumber(++waterCount, 4, 13, 2);
-            }
-            totalLickCount = lick.LCount + lick.RCount;
-            lcdWriteNumber(totalLickCount, 4, 12, 1);
-        }
-        if (timerCounterI >= waterLength) {
-            Valve_OFF(water_sweet);
-        }
-    }
-}
-
-void immobileBall(void) {
+void immobileBall(int t, int waterRation) {
+    int rationStart=waterRation;
+//    int waterITI = t * 1000;
+    protectedSerialSend(SpStepN, taskType);
     splash("Rewarded", "");
-    int waterRation = 400;
+    //    int waterRation = 400;
+    int moving = 0;
+    int lickCount = 0;
 
-    while (waterRation > 0) {
+    while (1) {
         int recentMove = (lick.current == LICKING_BOTH || lick.current == LICKING_RIGHT);
         if (recentMove) {
-            lcdWriteChar('M', 15, 1);
-            wait_ms(50);
+            if (!moving) {
+                moving = 1;
+                lcdWriteChar('M', 15, 1);
+                protectedSerialSend(SpBallMove, 1);
+            }
+            wait_ms(20);
         } else {
             timerCounterI = 0;
-            int lickFlag = 0;
-            while (timerCounterI < 200) {
-                if (lick.current == LICKING_BOTH || lick.current == LICKING_RIGHT) lickFlag = 1;
+            int moveFlag = 0;
+            while (timerCounterI < t * 1000) {
+                if (lick.current == LICKING_BOTH || lick.current == LICKING_RIGHT) {
+                    moveFlag = 1;
+                    break;
+                }
             }
-            if (!lickFlag) {
-                lcdWriteChar(' ', 15, 1);
-                lcdWriteNumber(400 - waterRation, 3, 1, 2);
-                waterRation--;
-                Valve_ON(1, pwm.fullDuty);
-                wait_ms(50);
-                Valve_OFF(1);
-                wait_ms(950);
+            if (!moveFlag) {
+                if (moving) {
+                    moving = 0;
+                    protectedSerialSend(SpBallMove, 0);
+                    lcdWriteChar(' ', 15, 1);
+                }
+                if (waterRation > 0) {
+                    lickCount = lick.LCount;
+                    lcdWriteNumber(rationStart - waterRation, 3, 1, 2);
+                    waterRation--;
+                    protectedSerialSend(SpHit, 1);
+                    Valve_ON(1, pwm.fullDuty);
+                    wait_ms(50);
+                    Valve_OFF(1);
+                }
+//                wait_ms(waterITI - 50);
             }
         }
     }
@@ -2130,7 +2159,12 @@ void callFunction(int n) {
             //            break;
 
         case 4301:
-            immobileBall();
+            taskType = BALL_IMMOBILE;
+            int waterT;
+            int waterRation;
+            waterT = getFuncNumber(1, "Water interval");
+            waterRation = getFuncNumber(3, "Water Ration");
+            immobileBall(waterT, waterRation);
             break;
 
         case 4302:
