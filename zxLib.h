@@ -56,6 +56,15 @@ typedef struct {
     unsigned int distr3;
 } STIM_T;
 
+typedef struct {
+    int moving;
+    int steadyThresh;
+//    int moved;
+//    long moveCounter;
+    int steadySent;
+    long steadyCounter;
+} BALL_T;
+
 #define _EE_WORD         2
 #define _memcpy_p2d16(dest, src, len)  _memcpy_helper(src, dest, len, 0) 
 #define _wait_eedata() { while (NVMCONbits.WR); }
@@ -194,9 +203,10 @@ typedef unsigned int _delayT;
 #define LASER_OTHER_BLOCK 80
 
 
-#define LICK_LEFT (PORTDbits.RD12 || !PORTDbits.RD14)
-#define LICK_RIGHT (PORTDbits.RD13 || !PORTDbits.RD15)
-#define LICK_ANY (PORTDbits.RD12 || PORTDbits.RD13 || !PORTDbits.RD14 || !PORTDbits.RD15)
+#define LICK_LEFT (!PORTDbits.RD14)
+#define LICK_RIGHT (!PORTDbits.RD15)
+#define LICK_ANY (!PORTDbits.RD14 || !PORTDbits.RD15)
+#define BALL_MOVING (PORTDbits.RD12 || PORTDbits.RD13)
 #define LICKING_LEFT 2
 #define LICKING_RIGHT 3
 #define LICKING_BOTH 127
@@ -223,6 +233,7 @@ typedef unsigned int _delayT;
 #define DUAL_TASK_DISTRx3_TASK 98
 #define ODPA_SHAPING_TASK 99
 #define ODPA_TASK 100
+#define ODPA_SHAPING_BALL_TASK 105
 #define DNMS_DUAL_TASK_LEARNING 110
 #define DNMS_DUAL_TASK 115
 #define DUAL_TASK_EVERY_TRIAL  120
