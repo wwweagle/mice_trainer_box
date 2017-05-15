@@ -195,11 +195,14 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         Nop();
         Nop();
     }
-//    if (BALL_MOVING) {
-//        protectedSerialSend(SpBallMove, 1);
-//    }
+    //    if (BALL_MOVING) {
+    //        protectedSerialSend(SpBallMove, 1);
+    //    }
 
-    if (BALL_MOVING && !mball.moving) {
+    if ((taskType == ODPA_SHAPING_BALL_TASK
+            || taskType == ODPA_BALL_TASK
+            || taskType == BALL_IMMOBILE) &&
+            BALL_MOVING && !mball.moving) {
         mball.moving = 1;
         if (mball.steadySent) {
             protectedSerialSend(SpBallMove, 1);
@@ -1053,6 +1056,7 @@ static void zxLaserSessions(int stim1, int stim2, int laserTrialType, _delayT de
                         secondOdor = (firstOdor == 9) ? stim2 : stim1;
                         break;
                     case ODPA_TASK:
+                    case ODPA_BALL_TASK:
                         firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
                         secondOdor = (index == 1 || index == 2) ? stim2 : (stim2 + 1);
                         break;
@@ -1416,7 +1420,7 @@ static void stim(int place, int stim, int type) {
 }
 
 static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdorDelay, int secondOdor, float waterPeroid, unsigned int ITI) {
-    if (taskType == ODPA_SHAPING_BALL_TASK) {
+    if (taskType == ODPA_SHAPING_BALL_TASK || taskType == ODPA_BALL_TASK) {
         while (mball.steadyCounter < mball.steadyThresh) {
         }
         resetTimerCounterJ();
@@ -2191,14 +2195,7 @@ void callFunction(int n) {
             //            zxLaserSessions(5, 6, laserRampDuringDelay, 2u, 5u, 20, 0.05, 20, setSessionNum());
             //            break;
 
-        case 4301:
-            taskType = BALL_IMMOBILE;
-            int waterT;
-            int waterRation;
-            waterT = getFuncNumber(1, "Water interval");
-            waterRation = getFuncNumber(3, "Water Ration");
-            immobileBall(waterT, waterRation);
-            break;
+
 
             //        case 4302:
             //        {
@@ -2213,16 +2210,7 @@ void callFunction(int n) {
             //        }
 
 
-        case 4302:
-        {
-            splash("ODPA_BALL", "Shaping");
-            laserSessionType = LASER_NO_TRIAL;
-            taskType = ODPA_SHAPING_BALL_TASK;
-            mball.steadyThresh = getFuncNumber(1, "Steady Threshold")*1000;
-            unsigned int delay = setDelay();
-            zxLaserSessions(2, 5, laserOff, delay, delay, 24u, 0.05, 288, setSessionNum());
-            break;
-        }
+
 
         case 4303:
             splash("Each Quarter", "Delay LR Laser");
@@ -3212,6 +3200,39 @@ void callFunction(int n) {
 
         case 4450:
             varifyOpticalSuppression();
+
+        case 4461:
+            taskType = BALL_IMMOBILE;
+            int waterT;
+            int waterRation;
+            waterT = getFuncNumber(1, "Water interval");
+            waterRation = getFuncNumber(3, "Water Ration");
+            immobileBall(waterT, waterRation);
+            break;
+
+
+
+        case 4462:
+        {
+            splash("ODPA_BALL", "Shaping");
+            laserSessionType = LASER_NO_TRIAL;
+            taskType = ODPA_SHAPING_BALL_TASK;
+            mball.steadyThresh = getFuncNumber(1, "Steady Threshold")*1000;
+            unsigned int delay = setDelay();
+            zxLaserSessions(2, 5, laserOff, delay, delay, 24u, 0.05, 288, setSessionNum());
+            break;
+        }
+
+        case 4463:
+        {
+            splash("ODPA_BALL", "Shaping");
+            laserSessionType = LASER_NO_TRIAL;
+            taskType = ODPA_BALL_TASK;
+            mball.steadyThresh = getFuncNumber(1, "Steady Threshold")*1000;
+            unsigned int delay = setDelay();
+            zxLaserSessions(2, 5, laserOff, delay, delay, 24u, 0.05, 288, setSessionNum());
+            break;
+        }
 
     }
 }
