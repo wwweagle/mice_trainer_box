@@ -13,7 +13,7 @@ unsigned char hardwareKeyPressed;
 unsigned char LCD_num[] = {0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x2A, 0X23};
 
 
-unsigned int hit = 0, miss = 0, falseAlarm = 0, correctRejection = 0, correctRatio = 0;
+unsigned int hit = 0, miss = 0, falseAlarm = 0, correctRejection = 0, correctRatio = 0, abortTrials = 0;
 int currentMiss = 0;
 
 void safe_wait_ms(int duration) {
@@ -69,7 +69,7 @@ void InitTMR(void) {
     T2CON = 0x8020;
     ConfigIntTimer2(T2_INT_PRIOR_5 & T2_INT_ON);
 
-//    InitTMR3();
+    //    InitTMR3();
     Init_Keypad();
     //    Valve_ON(8, period + period / 2);
 }
@@ -361,16 +361,16 @@ void Init_PWM(void) {
 
 #define FULLDUTY 0xfe
 
-    PORTFbits.RF0 = 1;
-    Nop();
-    Nop();
-//    PORTCbits.RC1 = 1;
+//    PORTFbits.RF0 = 1;
 //    Nop();
 //    Nop();
-    PDC2 = FULLDUTY;
-//    Nop();
-//    Nop();
-//    PDC4 = FULLDUTY; //ZX 20160503 TEMP Distractor work around-
+    //    PORTCbits.RC1 = 1;
+    //    Nop();
+    //    Nop();
+//    PDC2 = FULLDUTY;
+    //    Nop();
+    //    Nop();
+    //    PDC4 = FULLDUTY; //ZX 20160503 TEMP Distractor work around-
 }
 #undef FULLDUTY
 
@@ -528,6 +528,7 @@ unsigned int getFuncNumber(int targetDigits, char* input) {
 
 //THIS IS BAD PRACTICE, YOU SHOULD AVOID USE THIS IF POSSIBLE
 //ONLY FOR BACKWARD COMPATIBILITY WITH CQ
+
 void DelayNmSecNew(unsigned int N) {
 #ifdef DEBUG
     return;

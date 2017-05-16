@@ -1,3 +1,4 @@
+
 /* 
  * File:   zxLib.h
  * Author: ZX
@@ -49,9 +50,11 @@ typedef struct {
 typedef struct {
     unsigned int stim1Length;
     unsigned int stim2Length;
+    unsigned int respCueLength;
     unsigned int distractorLength;
     unsigned int currentDistractor;
     unsigned int distractorJudgingPair;
+    unsigned int respCueValve;
     unsigned int distr2;
     unsigned int distr3;
 } STIM_T;
@@ -171,6 +174,9 @@ typedef unsigned int _delayT;
 #define atSecondOdorBeginning 70
 #define atSecondOdorEnd 80
 //#define atRewardDelayBeginning 90
+#define atResponseCueBeginning 90
+#define atResponseCueEnd 95
+
 #define atRewardBeginning 100
 //#define atRewardBeginning 110
 #define atRewardEnd 120
@@ -201,6 +207,7 @@ typedef unsigned int _delayT;
 #define LASER_DUAL_TASK_ODAP_ON_OFF 61
 #define LASER_AFTER_DISTR_3X 65
 #define LASER_OTHER_BLOCK 80
+#define LASER_SESS_UNDEFINED 100
 
 
 #define LICK_LEFT (!PORTDbits.RD14)
@@ -225,19 +232,21 @@ typedef unsigned int _delayT;
 #define NO_ODOR_CATCH_TRIAL_TASK 60
 #define VARY_ODOR_LENGTH_TASK 70
 #define OPTO_ODPA_TASK 80
-#define OPTO_ODPA_SHAPING_TASK 81
+#define OPTO_ODPA_SHAPING_TASK 82
 #define DUAL_TASK_LEARNING 90
 #define DUAL_TASK 93
 #define DUAL_TASK_ON_OFF_LASER_TASK 95
 #define DUAL_TASK_ODAP_ON_OFF_LASER_TASK 96
 #define DUAL_TASK_DISTRx3_TASK 98
 #define ODPA_SHAPING_TASK 99
-#define ODPA_TASK 100
-#define ODPA_SHAPING_BALL_TASK 105
-#define ODPA_BALL_TASK 106
-#define DNMS_DUAL_TASK_LEARNING 110
-#define DNMS_DUAL_TASK 115
-#define DUAL_TASK_EVERY_TRIAL  120
+#define ODPA_RD_SHAPING_CATCH_LASER_TASK 100
+#define ODPA_RD_SHAPING_B_CATCH_LASER_TASK 101
+#define ODPA_TASK 110
+#define ODPA_SHAPING_BALL_TASK 115
+#define ODPA_BALL_TASK 116
+#define DNMS_DUAL_TASK_LEARNING 120
+#define DNMS_DUAL_TASK 125
+#define DUAL_TASK_EVERY_TRIAL  130
 #define BALL_IMMOBILE 150
 
 
@@ -268,6 +277,8 @@ typedef unsigned int _delayT;
 
 
 #define SpBallMove 82
+#define SpResponseCue 83
+#define SpAbortTrial 84
 
 
 //extern float odorLength;

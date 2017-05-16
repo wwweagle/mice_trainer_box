@@ -4,7 +4,7 @@
 //DEBUG
 
 
-STIM_T stims = {.stim1Length = 1000u, .stim2Length = 1000u, .distractorLength = 500u, .currentDistractor = 7u, .distractorJudgingPair = 8u, .distr2 = 7u, .distr3 = 7u};
+STIM_T stims = {.stim1Length = 1000u, .stim2Length = 1000u, .respCueLength = 500u, .respCueValve=7, .distractorLength = 500u, .currentDistractor = 7u, .distractorJudgingPair = 8u, .distr2 = 7u, .distr3 = 7u};
 LASER_T laser = {.timer = 0u, .onTime = 65535u, .offTime = 0u, .ramp = 0u, .ramping = 0u, .on = 0u, .side = 1u}; //1L,2R,3LR
 PWM_T pwm = {.L_Hi = 0xfe, .R_Hi = 0xfe, .L_Lo = 0u, .R_Lo = 0u, .fullDuty = 0xfe};
 LICK_T lick = {.current = 0u, .filter = 0u, .flag = 0u, .LCount = 0u, .RCount = 0u};
@@ -195,28 +195,29 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
         Nop();
         Nop();
     }
-    //    if (BALL_MOVING) {
-    //        protectedSerialSend(SpBallMove, 1);
-    //    }
+    /////////////////////////////////////////
+    //////////// BALL //////////////
+    //////////////////////////////
 
-    if ((taskType == ODPA_SHAPING_BALL_TASK
+    if (taskType == ODPA_SHAPING_BALL_TASK
             || taskType == ODPA_BALL_TASK
-            || taskType == BALL_IMMOBILE) &&
-            BALL_MOVING && !mball.moving) {
-        mball.moving = 1;
-        if (mball.steadySent) {
-            protectedSerialSend(SpBallMove, 1);
-            mball.steadySent = 0;
-        }
-        mball.steadyCounter = 0;
+            || taskType == BALL_IMMOBILE) {
+        if (BALL_MOVING && !mball.moving) {
+            mball.moving = 1;
+            if (mball.steadySent) {
+                protectedSerialSend(SpBallMove, 1);
+                mball.steadySent = 0;
+            }
+            mball.steadyCounter = 0;
 
-    } else if (mball.moving && !BALL_MOVING) {
-        mball.moving = 0;
-    } else if ((!mball.moving) && !BALL_MOVING) {
-        mball.steadyCounter += 5;
-        if (mball.steadyCounter > 200 && !mball.steadySent) {
-            protectedSerialSend(SpBallMove, 0);
-            mball.steadySent = 1;
+        } else if (mball.moving && !BALL_MOVING) {
+            mball.moving = 0;
+        } else if ((!mball.moving) && !BALL_MOVING) {
+            mball.steadyCounter += 5;
+            if (mball.steadyCounter > 200 && !mball.steadySent) {
+                protectedSerialSend(SpBallMove, 0);
+                mball.steadySent = 1;
+            }
         }
     }
 }
@@ -784,6 +785,8 @@ static void processLRTeaching(float waterPeroid, int LR) {
 }
 
 static void waterNResult(int firstOdor, int secondOdor, float waterPeroid, int id) {
+    int rewardWindow = (taskType == ODPA_RD_SHAPING_CATCH_LASER_TASK
+            || taskType == ODPA_RD_SHAPING_B_CATCH_LASER_TASK) ? 1000 : 500;
     lick.flag = 0;
     switch (taskType) {
 
@@ -874,7 +877,7 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid, int i
             //        
 
             ///////////Detect/////////////////
-            for (timerCounterI = 0; timerCounterI < 500 && !lick.flag; lick.flag = lick.current);
+            for (timerCounterI = 0; timerCounterI < rewardWindow && !lick.flag; lick.flag = lick.current);
 
             /////Reward
             if (!lick.flag) {
@@ -884,7 +887,9 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid, int i
                 } else {
                     processMiss(id);
                     if ((taskType == SHAPING_TASK || taskType == ODPA_SHAPING_TASK || taskType == ODPA_SHAPING_BALL_TASK
-                            || taskType == DUAL_TASK_LEARNING || taskType == DNMS_DUAL_TASK_LEARNING) && ((rand() % 3) == 0)) {
+                            || taskType == DUAL_TASK_LEARNING || taskType == DNMS_DUAL_TASK_LEARNING
+                            || taskType == ODPA_RD_SHAPING_CATCH_LASER_TASK
+                            || taskType == ODPA_RD_SHAPING_B_CATCH_LASER_TASK) && ((rand() % 3) == 0)) {
                         protectedSerialSend(22, 1);
                         Valve_ON(water_sweet, pwm.fullDuty);
                         protectedSerialSend(SpWater_sweet, 1);
@@ -1021,13 +1026,7 @@ static void zxLaserSessions(int stim1, int stim2, int laserTrialType, _delayT de
                     case NO_ODOR_CATCH_TRIAL_TASK:
                         firstOdor = (index == 0 || index == 2) ? stim1 : stim2;
                         secondOdor = (index == 1 || index == 2) ? stim1 : stim2;
-                        if ((currentTrial > 3 && currentTrial < 8 && firstOdor == stim1 && secondOdor == stim1)
-                                || (currentTrial > 7 && currentTrial < 12 && firstOdor == stim1 && secondOdor == stim2)
-                                || (currentTrial > 11 && currentTrial < 16 && firstOdor == stim2 && secondOdor == stim1)
-                                || (currentTrial > 15 && currentTrial < 20 && firstOdor == stim2 && secondOdor == stim2)) {
-                            firstOdor -= 3;
-                        } else {
-                        }
+
                         break;
 
                     case VARY_ODOR_LENGTH_TASK:
@@ -1065,6 +1064,15 @@ static void zxLaserSessions(int stim1, int stim2, int laserTrialType, _delayT de
                     case ODPA_SHAPING_BALL_TASK:
                         firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
                         secondOdor = (firstOdor == stim1) ? (stim2 + 1) : stim2;
+                        break;
+                    case ODPA_RD_SHAPING_CATCH_LASER_TASK:
+                        firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
+                        secondOdor = (firstOdor == stim1) ? (stim2 + 1) : stim2;
+                        if (currentTrial > 15) {
+                            laserTrialType = laserDuringDelayChR2;
+                        } else {
+                            laserTrialType = laserOff;
+                        }
                         break;
                     case DUAL_TASK_LEARNING:
                     case DUAL_TASK:
@@ -1376,6 +1384,7 @@ static void stim(int place, int stim, int type) {
         case 0:
         case 2:
         case 3:
+        case 4:
         case 5:
         case 6:
         case 7:
@@ -1383,19 +1392,50 @@ static void stim(int place, int stim, int type) {
         case 9:
         case 10:
         case 20://FAKE ODAP 
-            assertLaser(type, place == 1 ? atFirstOdorBeginning : atSecondOdorBeginning);
+            switch (place) {
+                case 1:
+                    assertLaser(type, atFirstOdorBeginning);
+                    break;
+                case 2:
+                    assertLaser(type, atSecondOdorBeginning);
+                    break;
+                case 3:
+                    assertLaser(type, atResponseCueBeginning);
+                    break;
+            }
+
             Valve_ON(stim, pwm.fullDuty);
             int stimSend;
-            if (isLikeOdorA(stim)) {
-                stimSend = 9;
-                Out2 = 1;
-            } else {
-                stimSend = 10;
-                Out3 = 1;
+            switch (place) {
+                case 1:
+                case 2:
+                    if (isLikeOdorA(stim)) {
+                        stimSend = 9;
+                        Out2 = 1;
+                    } else {
+                        stimSend = 10;
+                        Out3 = 1;
+                    }
+                    break;
+                case 3:
+                    stimSend = SpResponseCue;
+                    break;
             }
             protectedSerialSend(stimSend, stim);
-            lcdWriteChar(place == 1 ? '1' : '2', 4, 1);
-            waitTimerJ(place == 1 ? stims.stim1Length : stims.stim2Length);
+            switch (place) {
+                case 1:
+                    lcdWriteChar('1', 4, 1);
+                    waitTimerJ(stims.stim1Length);
+                    break;
+                case 2:
+                    lcdWriteChar('2', 4, 1);
+                    waitTimerJ(stims.stim2Length);
+                    break;
+                case 3:
+                    lcdWriteChar('3', 4, 1);
+                    waitTimerJ(stims.respCueLength);
+                    break;
+            }
             Valve_OFF(stim);
             Out2 = 0;
             Nop();
@@ -1404,9 +1444,21 @@ static void stim(int place, int stim, int type) {
             Nop();
             Nop();
             protectedSerialSend(stimSend, 0);
-            assertLaser(type, place == 1 ? atFirstOdorEnd : atSecondOdorEnd);
-            lcdWriteChar(place == 1 ? 'd' : 'D', 4, 1);
-            waitTimerJ(1000u - (place == 1 ? stims.stim1Length : stims.stim2Length));
+            switch (place) {
+                case 1:
+                    assertLaser(type, atFirstOdorEnd);
+                    lcdWriteChar('d', 4, 1);
+                    waitTimerJ(1000u - stims.stim1Length);
+                    break;
+                case 2:
+                    assertLaser(type, atSecondOdorEnd);
+                    lcdWriteChar('D', 4, 1);
+                    waitTimerJ(1000u - stims.stim2Length);
+                    break;
+                case 3:
+                    assertLaser(type, atResponseCueEnd);
+                    break;
+            }
             break;
             //        case 20:
             //        case 21:
@@ -1417,6 +1469,18 @@ static void stim(int place, int stim, int type) {
 
 
     }
+}
+
+unsigned int responseDelayLicked(unsigned int lengthInMilliSec) {
+    unsigned int targetTime = timerCounterJ + lengthInMilliSec;
+    lick.flag = 0;
+    while (timerCounterJ < targetTime) {
+        if (lick.current) {
+            lick.flag = 1;
+        }
+    }
+    waitTimerJ(lengthInMilliSec);
+    return lick.flag;
 }
 
 static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdorDelay, int secondOdor, float waterPeroid, unsigned int ITI) {
@@ -1565,20 +1629,25 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
             //////////////////////////////////////////
             break;
     }
-    waitTimerJ(1000u);
-    assertLaser(type, atRewardBeginning);
-    lcdWriteChar('R', 4, 1);
+    unsigned int delayLick = responseDelayLicked(1500u);
 
-    //Assess Performance here
-    int id = (taskType == DUAL_TASK || taskType == DUAL_TASK_LEARNING
-            || taskType == DUAL_TASK_ON_OFF_LASER_TASK || taskType == DUAL_TASK_ODAP_ON_OFF_LASER_TASK
-            || taskType == DNMS_DUAL_TASK_LEARNING || taskType == DNMS_DUAL_TASK || taskType == DUAL_TASK_EVERY_TRIAL) ? 2 : 1;
-    waterNResult(firstOdor, secondOdor, waterPeroid, id);
-
-    waitTimerJ(550u); //water time sync
-
+    if (delayLick) {
+        protectedSerialSend(SpAbortTrial, 1);
+        lcdWriteChar('A', 4, 1);
+        waitTimerJ(500u);
+    } else {
+        assertLaser(type, atRewardBeginning);
+        lcdWriteChar('R', 4, 1);
+        stim(3, stims.respCueValve, type);
+        //Assess Performance here
+        int id = (taskType == DUAL_TASK || taskType == DUAL_TASK_LEARNING
+                || taskType == DUAL_TASK_ON_OFF_LASER_TASK || taskType == DUAL_TASK_ODAP_ON_OFF_LASER_TASK
+                || taskType == DNMS_DUAL_TASK_LEARNING || taskType == DNMS_DUAL_TASK || taskType == DUAL_TASK_EVERY_TRIAL) ? 2 : 1;
+        waterNResult(firstOdor, secondOdor, waterPeroid, id);
+    }
+    waitTimerJ(1050u); //water time sync
     // Total Trials
-    int totalTrials = hit + correctRejection + miss + falseAlarm;
+    int totalTrials = hit + correctRejection + miss + falseAlarm + abortTrials;
     lcdWriteNumber(totalTrials, 3, 14, 2);
     // Discrimination rate
     if (hit + correctRejection > 0) {
@@ -1603,6 +1672,7 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
         waitTimerJ(trialITI * 1000u); //another 4000 is at the beginning of the trials.
     }
     protectedSerialSend(SpITI, 0);
+
     waitTrial();
 }
 
@@ -2863,6 +2933,20 @@ void callFunction(int n) {
             break;
         }
 
+        case 4375:
+        {
+            splash("ODPA R_D", "Shaping");
+            highLevelShuffleLength = 20;
+            laserSessionType = LASER_SESS_UNDEFINED;
+            taskType = ODPA_RD_SHAPING_CATCH_LASER_TASK;
+            splash("Sample Odor", "");
+            int sampleType = setType();
+            splash("Test Odor", "");
+            int testType = setType();
+            zxLaserSessions(sampleType, testType, laserOff, 5u, 8u, 20u, 0.05, 50, setSessionNum());
+            break;
+        }
+
         case 4380:
         {
             splash("ODPA", "Shaping");
@@ -3200,6 +3284,7 @@ void callFunction(int n) {
 
         case 4450:
             varifyOpticalSuppression();
+            break;
 
         case 4461:
             taskType = BALL_IMMOBILE;

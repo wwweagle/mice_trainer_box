@@ -239,7 +239,7 @@ extern unsigned char hardwareKey;
 extern unsigned char hardwareKeyPressed;
 extern int u2Received;
 
-extern unsigned int hit, miss, falseAlarm, correctRejection, correctRatio;
+extern unsigned int hit, miss, falseAlarm, correctRejection, correctRatio, abortTrials;
 extern int currentMiss;
 
 unsigned int getFuncNumber(int targetDigits, char* input);
