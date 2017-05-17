@@ -55,6 +55,7 @@ typedef struct {
     unsigned int currentDistractor;
     unsigned int distractorJudgingPair;
     unsigned int respCueValve;
+    unsigned int shapingExtra;
     unsigned int distr2;
     unsigned int distr3;
 } STIM_T;
@@ -239,7 +240,7 @@ typedef unsigned int _delayT;
 #define DUAL_TASK_ODAP_ON_OFF_LASER_TASK 96
 #define DUAL_TASK_DISTRx3_TASK 98
 #define ODPA_SHAPING_TASK 99
-#define ODPA_RD_SHAPING_CATCH_LASER_TASK 100
+#define ODPA_RD_SHAPING_A_CATCH_LASER_TASK 100
 #define ODPA_RD_SHAPING_B_CATCH_LASER_TASK 101
 #define ODPA_TASK 110
 #define ODPA_SHAPING_BALL_TASK 115

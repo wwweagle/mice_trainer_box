@@ -4,8 +4,11 @@
 //DEBUG
 
 
-STIM_T stims = {.stim1Length = 1000u, .stim2Length = 1000u, .respCueLength = 500u, .respCueValve=7, .distractorLength = 500u, .currentDistractor = 7u, .distractorJudgingPair = 8u, .distr2 = 7u, .distr3 = 7u};
-LASER_T laser = {.timer = 0u, .onTime = 65535u, .offTime = 0u, .ramp = 0u, .ramping = 0u, .on = 0u, .side = 1u}; //1L,2R,3LR
+STIM_T stims = {.stim1Length = 1000u, .stim2Length = 1000u, .respCueLength = 500u,
+    .respCueValve = 7, .shapingExtra = 8, .distractorLength = 500u,
+    .currentDistractor = 7u, .distractorJudgingPair = 8u, .distr2 = 7u, .distr3 = 7u};
+LASER_T laser = {.timer = 0u, .onTime = 65535u, .offTime = 0u, .ramp = 0u,
+    .ramping = 0u, .on = 0u, .side = 1u}; //1L,2R,3LR
 PWM_T pwm = {.L_Hi = 0xfe, .R_Hi = 0xfe, .L_Lo = 0u, .R_Lo = 0u, .fullDuty = 0xfe};
 LICK_T lick = {.current = 0u, .filter = 0u, .flag = 0u, .LCount = 0u, .RCount = 0u};
 BALL_T mball = {.moving = 0, .steadyCounter = 0, .steadySent = 0};
@@ -21,7 +24,8 @@ unsigned int highLevelShuffleLength = 12u;
 
 const _prog_addressT EE_Addr = 0x7ff000;
 
-static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdorDelay, int secondOdor, float waterPeroid, unsigned int ITI);
+static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdorDelay,
+        int secondOdor, float waterPeroid, unsigned int ITI);
 unsigned int getFuncNumberMarquee(int targetDigits, char input[], int l);
 
 char * getVer(void) {
@@ -785,8 +789,12 @@ static void processLRTeaching(float waterPeroid, int LR) {
 }
 
 static void waterNResult(int firstOdor, int secondOdor, float waterPeroid, int id) {
-    int rewardWindow = (taskType == ODPA_RD_SHAPING_CATCH_LASER_TASK
+    int rewardWindow = (taskType == ODPA_RD_SHAPING_A_CATCH_LASER_TASK
             || taskType == ODPA_RD_SHAPING_B_CATCH_LASER_TASK) ? 1000 : 500;
+    if (taskType == ODPA_RD_SHAPING_B_CATCH_LASER_TASK && firstOdor == stims.shapingExtra) {
+        firstOdor = secondOdor;
+    }
+
     lick.flag = 0;
     switch (taskType) {
 
@@ -888,7 +896,7 @@ static void waterNResult(int firstOdor, int secondOdor, float waterPeroid, int i
                     processMiss(id);
                     if ((taskType == SHAPING_TASK || taskType == ODPA_SHAPING_TASK || taskType == ODPA_SHAPING_BALL_TASK
                             || taskType == DUAL_TASK_LEARNING || taskType == DNMS_DUAL_TASK_LEARNING
-                            || taskType == ODPA_RD_SHAPING_CATCH_LASER_TASK
+                            || taskType == ODPA_RD_SHAPING_A_CATCH_LASER_TASK
                             || taskType == ODPA_RD_SHAPING_B_CATCH_LASER_TASK) && ((rand() % 3) == 0)) {
                         protectedSerialSend(22, 1);
                         Valve_ON(water_sweet, pwm.fullDuty);
@@ -1065,7 +1073,7 @@ static void zxLaserSessions(int stim1, int stim2, int laserTrialType, _delayT de
                         firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
                         secondOdor = (firstOdor == stim1) ? (stim2 + 1) : stim2;
                         break;
-                    case ODPA_RD_SHAPING_CATCH_LASER_TASK:
+                    case ODPA_RD_SHAPING_A_CATCH_LASER_TASK:
                         firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
                         secondOdor = (firstOdor == stim1) ? (stim2 + 1) : stim2;
                         if (currentTrial > 15) {
@@ -1074,6 +1082,33 @@ static void zxLaserSessions(int stim1, int stim2, int laserTrialType, _delayT de
                             laserTrialType = laserOff;
                         }
                         break;
+                    case ODPA_RD_SHAPING_B_CATCH_LASER_TASK:
+                        switch (index) {
+                            case 0:
+                                firstOdor = stim1;
+                                secondOdor = stim2 + 1;
+                                break;
+                            case 1:
+                                firstOdor = stim1 + 1;
+                                secondOdor = stim2;
+                                break;
+                            case 2:
+                                firstOdor = stims.shapingExtra;
+                                secondOdor = stim1;
+                                break;
+                            case 3:
+                                firstOdor = stims.shapingExtra;
+                                secondOdor = stim2;
+                                break;
+                        }
+                        if (currentTrial > 15) {
+                            laserTrialType = laserDuringDelayChR2;
+                        } else {
+                            laserTrialType = laserOff;
+                        }
+                        break;
+
+
                     case DUAL_TASK_LEARNING:
                     case DUAL_TASK:
                         firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
@@ -2935,15 +2970,29 @@ void callFunction(int n) {
 
         case 4375:
         {
-            splash("ODPA R_D", "Shaping");
+            splash("ODPA R_D", "Shaping_A");
             highLevelShuffleLength = 20;
             laserSessionType = LASER_SESS_UNDEFINED;
-            taskType = ODPA_RD_SHAPING_CATCH_LASER_TASK;
+            taskType = ODPA_RD_SHAPING_A_CATCH_LASER_TASK;
             splash("Sample Odor", "");
             int sampleType = setType();
             splash("Test Odor", "");
             int testType = setType();
-            zxLaserSessions(sampleType, testType, laserOff, 5u, 8u, 20u, 0.05, 50, setSessionNum());
+            zxLaserSessions(sampleType, testType, laserOff, 5u, 8u, 20u, 0.05, 100, setSessionNum());
+            break;
+        }
+
+        case 4376:
+        {
+            splash("ODPA R_D", "Shaping_B");
+            highLevelShuffleLength = 20;
+            laserSessionType = LASER_SESS_UNDEFINED;
+            taskType = ODPA_RD_SHAPING_B_CATCH_LASER_TASK;
+            splash("Sample Odor", "");
+            int sampleType = setType();
+            splash("Test Odor", "");
+            int testType = setType();
+            zxLaserSessions(sampleType, testType, laserOff, 5u, 8u, 20u, 0.05, 100, setSessionNum());
             break;
         }
 
