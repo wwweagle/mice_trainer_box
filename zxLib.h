@@ -56,8 +56,8 @@ typedef struct {
     unsigned int distractorJudgingPair;
     unsigned int respCueValve;
     unsigned int shapingExtra;
-    unsigned int distr2;
-    unsigned int distr3;
+    int falseAlarmPenaltyRepeat;
+
 } STIM_T;
 
 typedef struct {
@@ -68,6 +68,10 @@ typedef struct {
     int steadySent;
     long steadyCounter;
 } BALL_T;
+
+#define FALSE_ALARM_PENALTY_TIMEOUT 10
+#define FALSE_ALARM_PENALTY_REPEAT 20
+
 
 #define _EE_WORD         2
 #define _memcpy_p2d16(dest, src, len)  _memcpy_helper(src, dest, len, 0) 

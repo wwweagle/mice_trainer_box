@@ -6,7 +6,7 @@
 
 STIM_T stims = {.stim1Length = 1000u, .stim2Length = 1000u, .respCueLength = 500u,
     .respCueValve = 7, .shapingExtra = 8, .distractorLength = 500u,
-    .currentDistractor = 7u, .distractorJudgingPair = 8u, .distr2 = 7u, .distr3 = 7u};
+    .currentDistractor = 7u, .distractorJudgingPair = 8u, .falseAlarmPenaltyRepeat = 0};
 LASER_T laser = {.timer = 0u, .onTime = 65535u, .offTime = 0u, .ramp = 0u,
     .ramping = 0u, .on = 0u, .side = 1u}; //1L,2R,3LR
 PWM_T pwm = {.L_Hi = 0xfe, .R_Hi = 0xfe, .L_Lo = 0u, .R_Lo = 0u, .fullDuty = 0xfe};
@@ -1113,8 +1113,10 @@ static void zxLaserSessions(int stim1, int stim2, int laserTrialType, _delayT de
                         }
                         break;
                     case ODPA_RD_CATCH_LASER_TASK:
-                        firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
-                        secondOdor = (index == 1 || index == 2) ? stim2 : (stim2 + 1);
+                        if (!stims.falseAlarmPenaltyRepeat) {
+                            firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
+                            secondOdor = (index == 1 || index == 2) ? stim2 : (stim2 + 1);
+                        }
                         if (currentTrial > 15) {
                             laserTrialType = laserDuringDelayChR2;
                         } else {
@@ -1146,15 +1148,7 @@ static void zxLaserSessions(int stim1, int stim2, int laserTrialType, _delayT de
                         else
                             stims.currentDistractor = 8u;
                         break;
-                    case DUAL_TASK_DISTRx3_TASK:
-                        firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
-                        secondOdor = (index == 1 || index == 2) ? stim2 : (stim2 + 1);
 
-                        unsigned int di[] = {7u, 8u};
-                        stims.currentDistractor = di[shuffledLongList[currentTrial * 3] % 2];
-                        stims.distr2 = di[shuffledLongList[currentTrial * 3 + 1] % 2];
-                        stims.distr3 = di[shuffledLongList[currentTrial * 3 + 2] % 2];
-                        break;
 
                     case DUAL_TASK_ON_OFF_LASER_TASK:
                         firstOdor = (index == 0 || index == 2) ? stim1 : (stim1 + 1);
@@ -1557,21 +1551,7 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
 
 
     switch (taskType) {
-            /********* 3 x distractor ************************/
-        case DUAL_TASK_DISTRx3_TASK:
-            waitTimerJ(2000u);
-            unsigned int di[] = {stims.currentDistractor, stims.distr2, stims.distr3};
-            int iter = 0;
-            for (; iter < 3; iter++) {
-                distractor(di[iter], stims.distractorJudgingPair, waterPeroid);
-                waitTimerJ(1500u);
-                assertLaser(type, atPostDualTask);
-                waitTimerJ(2000u);
-                assertLaser(type, atPreDualTask);
-                waitTimerJ(500u);
-            }
-            stim(2, secondOdor, type);
-            break;
+
 
             //Do nothing during Go Nogo Tasks
         case GONOGO_LR_TASK:
@@ -1709,9 +1689,16 @@ static void zxLaserTrial(int type, int firstOdor, STIM_T odors, _delayT interOdo
     assertLaser(type, atITIBeginning);
     waitTimerJ(1000u);
     assertLaser(type, atITIOneSecIn);
-    if (punishFalseAlarm && resultRtn == SpFalseAlarm) {
-        ITI *= 3u;
+    if (resultRtn == SpFalseAlarm) {
+        if (punishFalseAlarm == FALSE_ALARM_PENALTY_TIMEOUT) {
+            ITI *= 3u;
+        } else if (punishFalseAlarm == FALSE_ALARM_PENALTY_REPEAT) {
+            stims.falseAlarmPenaltyRepeat = 1;
+        }
+    } else {
+        stims.falseAlarmPenaltyRepeat = 0;
     }
+
 
     if (ITI >= 5u) {
         unsigned int trialITI = ITI - 5u;
@@ -3031,7 +3018,7 @@ void callFunction(int n) {
 
         case 4378:
         {
-            splash("ODPA R_D", "");
+            splash("ODPA R_D", "TIMEOUT");
             highLevelShuffleLength = 20;
             laserSessionType = LASER_SESS_UNDEFINED;
             taskType = ODPA_RD_CATCH_LASER_TASK;
@@ -3039,7 +3026,21 @@ void callFunction(int n) {
             int sampleType = setType();
             splash("Test Odor", "");
             int testType = setType();
-            punishFalseAlarm = 1;
+            punishFalseAlarm = FALSE_ALARM_PENALTY_TIMEOUT;
+            zxLaserSessions(sampleType, testType, laserOff, 5u, 8u, 20u, 0.05, 20, setSessionNum());
+            break;
+        }
+        case 4379:
+        {
+            splash("ODPA R_D", "REPEAT");
+            highLevelShuffleLength = 20;
+            laserSessionType = LASER_SESS_UNDEFINED;
+            taskType = ODPA_RD_CATCH_LASER_TASK;
+            splash("Sample Odor", "");
+            int sampleType = setType();
+            splash("Test Odor", "");
+            int testType = setType();
+            punishFalseAlarm = FALSE_ALARM_PENALTY_REPEAT;
             zxLaserSessions(sampleType, testType, laserOff, 5u, 8u, 20u, 0.05, 20, setSessionNum());
             break;
         }
